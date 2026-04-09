@@ -208,12 +208,9 @@ export default function Importacao() {
           continue;
         }
 
-        const { data: colab, error: colabErr } = await supabase
-          .from("colaboradores")
-          .upsert(
-            {
+        const colabData: any = {
               nome: row.nome,
-              matricula: row.matricula,
+              matricula: row.matricula || null,
               genero: row.genero as any,
               lideranca: row.lideranca,
               data_admissao: row.data_admissao,
@@ -224,9 +221,13 @@ export default function Importacao() {
               nivel_complexidade: row.nivel_complexidade as any,
               grupo: row.grupo,
               tipo_vinculo: row.tipo_vinculo as any,
-            },
-            { onConflict: "matricula" }
-          )
+              origem_recurso: row.origem_recurso || null,
+        };
+
+        const upsertOpts = row.matricula ? { onConflict: "matricula" } : {};
+        const { data: colab, error: colabErr } = await supabase
+          .from("colaboradores")
+          .upsert(colabData, upsertOpts as any)
           .select("id")
           .single();
 
