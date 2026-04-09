@@ -15,6 +15,7 @@ import { Constants } from "@/integrations/supabase/types";
 import { NIVEL_OPTIONS, nivelLabel } from "@/lib/nivelLabels";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useOrigensRecurso } from "@/hooks/useOrigensRecurso";
+import { AusenciaBadge } from "@/components/AusenciasManager";
 
 type Colaborador = Tables<"colaboradores">;
 
