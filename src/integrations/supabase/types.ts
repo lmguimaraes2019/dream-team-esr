@@ -19,17 +19,22 @@ export type Database = {
           ativo: boolean
           cargo: string
           created_at: string
+          custo_mensal_terceirizado: number | null
           data_admissao: string
           diretoria: string
+          duracao_contrato: string | null
+          empresa_terceirizada: string | null
           foto_url: string | null
           genero: Database["public"]["Enums"]["genero"]
           gerencia: string
+          gestor_contrato: string | null
           grupo: number
           id: string
           lideranca: boolean
-          matricula: string
+          matricula: string | null
           nivel_complexidade: Database["public"]["Enums"]["nivel_complexidade"]
           nome: string
+          origem_recurso: string | null
           tipo_vinculo: Database["public"]["Enums"]["tipo_vinculo"]
           trajetoria: string
           updated_at: string
@@ -38,17 +43,22 @@ export type Database = {
           ativo?: boolean
           cargo: string
           created_at?: string
+          custo_mensal_terceirizado?: number | null
           data_admissao: string
           diretoria: string
+          duracao_contrato?: string | null
+          empresa_terceirizada?: string | null
           foto_url?: string | null
           genero: Database["public"]["Enums"]["genero"]
           gerencia: string
+          gestor_contrato?: string | null
           grupo: number
           id?: string
           lideranca?: boolean
-          matricula: string
+          matricula?: string | null
           nivel_complexidade: Database["public"]["Enums"]["nivel_complexidade"]
           nome: string
+          origem_recurso?: string | null
           tipo_vinculo: Database["public"]["Enums"]["tipo_vinculo"]
           trajetoria: string
           updated_at?: string
@@ -57,17 +67,22 @@ export type Database = {
           ativo?: boolean
           cargo?: string
           created_at?: string
+          custo_mensal_terceirizado?: number | null
           data_admissao?: string
           diretoria?: string
+          duracao_contrato?: string | null
+          empresa_terceirizada?: string | null
           foto_url?: string | null
           genero?: Database["public"]["Enums"]["genero"]
           gerencia?: string
+          gestor_contrato?: string | null
           grupo?: number
           id?: string
           lideranca?: boolean
-          matricula?: string
+          matricula?: string | null
           nivel_complexidade?: Database["public"]["Enums"]["nivel_complexidade"]
           nome?: string
+          origem_recurso?: string | null
           tipo_vinculo?: Database["public"]["Enums"]["tipo_vinculo"]
           trajetoria?: string
           updated_at?: string
