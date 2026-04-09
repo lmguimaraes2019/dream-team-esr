@@ -11,6 +11,8 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type Colaborador = Tables<"colaboradores">;
 
+const TRAJETORIAS = ["Gestão do Negócio", "Liderança", "Relacionamento", "Tecnológica"] as const;
+
 interface Props {
   colaborador: Colaborador;
   open: boolean;
@@ -99,7 +101,14 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
           </div>
           <div className="space-y-2">
             <Label>Trajetória *</Label>
-            <Input required value={form.trajetoria} onChange={(e) => setForm({ ...form, trajetoria: e.target.value })} />
+            <Select value={form.trajetoria} onValueChange={(v) => setForm({ ...form, trajetoria: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {TRAJETORIAS.map((t) => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>Nível</Label>
