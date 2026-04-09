@@ -15,11 +15,18 @@ import { Constants } from "@/integrations/supabase/types";
 import { NIVEL_OPTIONS, nivelLabel } from "@/lib/nivelLabels";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useOrigensRecurso } from "@/hooks/useOrigensRecurso";
+import { AusenciaBadge } from "@/components/AusenciasManager";
 
 type Colaborador = Tables<"colaboradores">;
 
+interface AusenciaAtiva {
+  colaborador_id: string;
+  tipo: string;
+}
+
 export default function Colaboradores() {
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
+  const [ausenciasAtivas, setAusenciasAtivas] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [filtroGerencia, setFiltroGerencia] = useState("all");
   const [filtroNivel, setFiltroNivel] = useState("all");
@@ -33,6 +40,16 @@ export default function Colaboradores() {
   const load = async () => {
     const { data } = await supabase.from("colaboradores").select("*").eq("ativo", true).order("nome");
     setColaboradores(data || []);
+
+    const today = new Date().toISOString().split("T")[0];
+    const { data: ausencias } = await supabase
+      .from("ausencias")
+      .select("colaborador_id, tipo")
+      .lte("data_inicio", today)
+      .gte("data_fim", today);
+    const map: Record<string, string> = {};
+    ausencias?.forEach((a) => { map[a.colaborador_id] = a.tipo; });
+    setAusenciasAtivas(map);
   };
 
   useEffect(() => { load(); }, []);
@@ -280,7 +297,12 @@ export default function Colaboradores() {
                 className="cursor-pointer"
                 onClick={() => navigate(`/colaboradores/${c.id}`)}
               >
-                <TableCell className="font-medium">{c.nome}</TableCell>
+                <TableCell className="font-medium">
+                  <span className="flex items-center gap-2">
+                    {c.nome}
+                    {ausenciasAtivas[c.id] && <AusenciaBadge tipo={ausenciasAtivas[c.id]} />}
+                  </span>
+                </TableCell>
                 <TableCell>{c.tipo_vinculo === "terceirizado" ? (c as any).empresa_terceirizada || "—" : c.matricula || "—"}</TableCell>
                 <TableCell>{c.gerencia}</TableCell>
                 <TableCell>{c.cargo}</TableCell>

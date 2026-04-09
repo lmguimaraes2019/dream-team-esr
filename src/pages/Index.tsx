@@ -3,6 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, DollarSign, TrendingUp } from "lucide-react";
+import { Link } from "react-router-dom";
+import { format, parseISO } from "date-fns";
+import { AusenciaBadge } from "@/components/AusenciasManager";
 import { nivelLabel } from "@/lib/nivelLabels";
 import { MaleIcon, FemaleIcon, OtherIcon } from "@/components/GenderIcons";
 import {
@@ -53,6 +56,7 @@ export default function Index() {
   const [custoGerencia, setCustoGerencia] = useState<any[]>([]);
   const [distNivel, setDistNivel] = useState<any[]>([]);
   const [distTrajetoria, setDistTrajetoria] = useState<any[]>([]);
+  const [ausentes, setAusentes] = useState<any[]>([]);
 
   useEffect(() => {
     supabase
@@ -63,6 +67,15 @@ export default function Index() {
         setMeses(unique);
         if (unique.length > 0 && !mesRef) setMesRef(unique[0]);
       });
+
+    // Load current absences
+    const today = new Date().toISOString().split("T")[0];
+    supabase
+      .from("ausencias")
+      .select("*, colaboradores(nome)")
+      .lte("data_inicio", today)
+      .gte("data_fim", today)
+      .then(({ data }) => setAusentes(data || []));
   }, []);
 
   useEffect(() => {
@@ -214,6 +227,35 @@ export default function Index() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Colaboradores ausentes */}
+      {ausentes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Colaboradores Ausentes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
+              {ausentes.map((a) => (
+                <div key={a.id} className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-3">
+                    <Link
+                      to={`/colaboradores/${a.colaborador_id}`}
+                      className="font-medium hover:underline text-sm"
+                    >
+                      {(a.colaboradores as any)?.nome || "—"}
+                    </Link>
+                    <AusenciaBadge tipo={a.tipo} />
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {format(parseISO(a.data_inicio), "dd/MM/yyyy")} — {format(parseISO(a.data_fim), "dd/MM/yyyy")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {totalColab === 0 ? (
         <Card>
