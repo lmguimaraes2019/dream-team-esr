@@ -105,21 +105,31 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
         </DialogHeader>
         <form onSubmit={handleSave} className="grid gap-4 sm:grid-cols-2">
           {/* Photo upload */}
-          <div className="sm:col-span-2 flex justify-center">
+          <div className="sm:col-span-2 flex flex-col items-center gap-2">
             <div className="relative cursor-pointer" onClick={() => fileRef.current?.click()}>
-              <Avatar className="h-24 w-24">
+              <Avatar className="h-32 w-32">
                 {previewUrl ? (
-                  <AvatarImage src={previewUrl} alt={form.nome} />
+                  <AvatarImage src={previewUrl} alt={form.nome} className="object-cover" />
                 ) : null}
-                <AvatarFallback className="text-xl">{initials}</AvatarFallback>
+                <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
               </Avatar>
-              <div className="absolute bottom-0 right-0 rounded-full bg-primary p-1.5 text-primary-foreground">
-                <Camera className="h-4 w-4" />
+              <div className="absolute bottom-1 right-1 rounded-full bg-primary p-2 text-primary-foreground">
+                <Camera className="h-5 w-5" />
               </div>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
             </div>
+            {uploading && <p className="text-sm text-muted-foreground">Enviando foto...</p>}
           </div>
-          {uploading && <p className="sm:col-span-2 text-center text-sm text-muted-foreground">Enviando foto...</p>}
+          {cropSrc && (
+            <div className="sm:col-span-2">
+              <PhotoCropDialog
+                imageSrc={cropSrc}
+                open={!!cropSrc}
+                onClose={() => setCropSrc(null)}
+                onCropComplete={handleCroppedUpload}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Nome *</Label>
