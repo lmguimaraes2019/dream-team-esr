@@ -4,28 +4,37 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, DollarSign, TrendingUp } from "lucide-react";
 import { nivelLabel } from "@/lib/nivelLabels";
+import { MaleIcon, FemaleIcon, OtherIcon } from "@/components/GenderIcons";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   PieChart, Pie, Cell, ResponsiveContainer,
 } from "recharts";
+
 
 const COLORS = [
   "hsl(221, 83%, 53%)", "hsl(160, 60%, 45%)", "hsl(30, 80%, 55%)",
   "hsl(280, 65%, 60%)", "hsl(340, 75%, 55%)",
 ];
 
-const GENDER_ICONS: Record<string, string> = {
-  Masculino: "♂",
-  Feminino: "♀",
-  Outro: "⚧",
+const GENDER_COLORS: Record<string, string> = {
+  Masculino: "#2196F3",
+  Feminino: "#E91E63",
+  Outro: "#9C27B0",
 };
 
 const GenderTick = ({ x, y, payload }: any) => {
-  const icon = GENDER_ICONS[payload.value] || "";
+  const gender = payload.value;
+  const iconSize = 32;
   return (
     <g transform={`translate(${x},${y})`}>
-      <text x={0} y={0} dy={14} textAnchor="middle" fontSize={20}>{icon}</text>
-      <text x={0} y={0} dy={32} textAnchor="middle" fontSize={11} fill="hsl(var(--muted-foreground))">{payload.value}</text>
+      <foreignObject x={-iconSize / 2} y={4} width={iconSize} height={iconSize + 4}>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          {gender === "Masculino" && <MaleIcon size={iconSize} />}
+          {gender === "Feminino" && <FemaleIcon size={iconSize} />}
+          {gender === "Outro" && <OtherIcon size={iconSize} />}
+        </div>
+      </foreignObject>
+      <text x={0} y={iconSize + 18} textAnchor="middle" fontSize={11} fill="hsl(var(--muted-foreground))">{gender}</text>
     </g>
   );
 };
@@ -219,13 +228,17 @@ export default function Index() {
             <Card>
               <CardHeader><CardTitle className="text-base">Salário Médio por Gênero</CardTitle></CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={salarioGenero} margin={{ bottom: 30 }}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={salarioGenero} margin={{ bottom: 50 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="genero" tick={<GenderTick />} height={50} />
+                    <XAxis dataKey="genero" tick={<GenderTick />} height={65} />
                     <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                     <Tooltip formatter={(v: number) => fmt(v)} />
-                    <Bar dataKey="media" fill="hsl(221, 83%, 53%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="media" radius={[4, 4, 0, 0]}>
+                      {salarioGenero.map((entry, i) => (
+                        <Cell key={i} fill={GENDER_COLORS[entry.genero] || COLORS[0]} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>

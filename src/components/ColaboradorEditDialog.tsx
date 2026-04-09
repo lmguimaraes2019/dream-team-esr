@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Constants } from "@/integrations/supabase/types";
 import { NIVEL_OPTIONS } from "@/lib/nivelLabels";
 import { Camera } from "lucide-react";
+import PhotoCropDialog from "@/components/PhotoCropDialog";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Colaborador = Tables<"colaboradores">;
@@ -28,16 +29,23 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>((colaborador as any).foto_url || null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleCroppedUpload = async (blob: Blob) => {
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `${colaborador.id}.${ext}`;
-    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    const path = `${colaborador.id}.jpg`;
+    const { error } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
     if (error) {
       toast({ title: "Erro no upload", description: error.message, variant: "destructive" });
     } else {
@@ -97,21 +105,31 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
         </DialogHeader>
         <form onSubmit={handleSave} className="grid gap-4 sm:grid-cols-2">
           {/* Photo upload */}
-          <div className="sm:col-span-2 flex justify-center">
+          <div className="sm:col-span-2 flex flex-col items-center gap-2">
             <div className="relative cursor-pointer" onClick={() => fileRef.current?.click()}>
-              <Avatar className="h-24 w-24">
+              <Avatar className="h-32 w-32">
                 {previewUrl ? (
-                  <AvatarImage src={previewUrl} alt={form.nome} />
+                  <AvatarImage src={previewUrl} alt={form.nome} className="object-cover" />
                 ) : null}
-                <AvatarFallback className="text-xl">{initials}</AvatarFallback>
+                <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
               </Avatar>
-              <div className="absolute bottom-0 right-0 rounded-full bg-primary p-1.5 text-primary-foreground">
-                <Camera className="h-4 w-4" />
+              <div className="absolute bottom-1 right-1 rounded-full bg-primary p-2 text-primary-foreground">
+                <Camera className="h-5 w-5" />
               </div>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
             </div>
+            {uploading && <p className="text-sm text-muted-foreground">Enviando foto...</p>}
           </div>
-          {uploading && <p className="sm:col-span-2 text-center text-sm text-muted-foreground">Enviando foto...</p>}
+          {cropSrc && (
+            <div className="sm:col-span-2">
+              <PhotoCropDialog
+                imageSrc={cropSrc}
+                open={!!cropSrc}
+                onClose={() => setCropSrc(null)}
+                onCropComplete={handleCroppedUpload}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Nome *</Label>
