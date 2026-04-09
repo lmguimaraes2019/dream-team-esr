@@ -116,7 +116,14 @@ export default function Colaboradores() {
                 </div>
                 <div className="space-y-2">
                   <Label>Trajetória *</Label>
-                  <Input required value={form.trajetoria || ""} onChange={(e) => setForm({ ...form, trajetoria: e.target.value })} />
+                  <Select value={form.trajetoria || ""} onValueChange={(v) => setForm({ ...form, trajetoria: v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {["Gestão do Negócio", "Liderança", "Relacionamento", "Tecnológica"].map((t) => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Nível</Label>
