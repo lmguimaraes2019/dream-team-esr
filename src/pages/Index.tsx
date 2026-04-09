@@ -67,6 +67,15 @@ export default function Index() {
         setMeses(unique);
         if (unique.length > 0 && !mesRef) setMesRef(unique[0]);
       });
+
+    // Load current absences
+    const today = new Date().toISOString().split("T")[0];
+    supabase
+      .from("ausencias")
+      .select("*, colaboradores(nome)")
+      .lte("data_inicio", today)
+      .gte("data_fim", today)
+      .then(({ data }) => setAusentes(data || []));
   }, []);
 
   useEffect(() => {
