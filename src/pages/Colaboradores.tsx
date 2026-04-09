@@ -18,8 +18,14 @@ import { useOrigensRecurso } from "@/hooks/useOrigensRecurso";
 
 type Colaborador = Tables<"colaboradores">;
 
+interface AusenciaAtiva {
+  colaborador_id: string;
+  tipo: string;
+}
+
 export default function Colaboradores() {
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
+  const [ausenciasAtivas, setAusenciasAtivas] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [filtroGerencia, setFiltroGerencia] = useState("all");
   const [filtroNivel, setFiltroNivel] = useState("all");
@@ -33,6 +39,16 @@ export default function Colaboradores() {
   const load = async () => {
     const { data } = await supabase.from("colaboradores").select("*").eq("ativo", true).order("nome");
     setColaboradores(data || []);
+
+    const today = new Date().toISOString().split("T")[0];
+    const { data: ausencias } = await supabase
+      .from("ausencias")
+      .select("colaborador_id, tipo")
+      .lte("data_inicio", today)
+      .gte("data_fim", today);
+    const map: Record<string, string> = {};
+    ausencias?.forEach((a) => { map[a.colaborador_id] = a.tipo; });
+    setAusenciasAtivas(map);
   };
 
   useEffect(() => { load(); }, []);
