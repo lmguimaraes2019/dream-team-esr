@@ -12,6 +12,7 @@ import { NIVEL_OPTIONS } from "@/lib/nivelLabels";
 import { Camera } from "lucide-react";
 import PhotoCropDialog from "@/components/PhotoCropDialog";
 import type { Tables } from "@/integrations/supabase/types";
+import { useOrigensRecurso } from "@/hooks/useOrigensRecurso";
 
 type Colaborador = Tables<"colaboradores">;
 
@@ -32,6 +33,7 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const origensRecurso = useOrigensRecurso();
 
   const isTerceirizado = form.tipo_vinculo === "terceirizado";
 
@@ -170,7 +172,14 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
               </div>
               <div className="space-y-2">
                 <Label>Origem de Recurso</Label>
-                <Input value={(form as any).origem_recurso || ""} onChange={(e) => setForm({ ...form, origem_recurso: e.target.value } as any)} />
+                <Select value={(form as any).origem_recurso || ""} onValueChange={(v) => setForm({ ...form, origem_recurso: v } as any)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {origensRecurso.map((o) => (
+                      <SelectItem key={o} value={o}>{o}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </>
           )}
