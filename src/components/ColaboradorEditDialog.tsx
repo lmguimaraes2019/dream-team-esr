@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Constants } from "@/integrations/supabase/types";
+import { NIVEL_OPTIONS } from "@/lib/nivelLabels";
+import { Camera } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Colaborador = Tables<"colaboradores">;
@@ -23,7 +26,28 @@ interface Props {
 export default function ColaboradorEditDialog({ colaborador, open, onOpenChange, onSaved }: Props) {
   const [form, setForm] = useState({ ...colaborador });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>((colaborador as any).foto_url || null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${colaborador.id}.${ext}`;
+    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    if (error) {
+      toast({ title: "Erro no upload", description: error.message, variant: "destructive" });
+    } else {
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      const url = `${data.publicUrl}?t=${Date.now()}`;
+      setPreviewUrl(url);
+      setForm({ ...form, foto_url: url } as any);
+    }
+    setUploading(false);
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +68,8 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
         grupo: form.grupo,
         tipo_vinculo: form.tipo_vinculo,
         ativo: form.ativo,
-      })
+        foto_url: (form as any).foto_url,
+      } as any)
       .eq("id", colaborador.id);
 
     setSaving(false);
@@ -57,6 +82,13 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
     }
   };
 
+  const initials = form.nome
+    ?.split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -64,6 +96,23 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
           <DialogTitle>Editar Colaborador</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSave} className="grid gap-4 sm:grid-cols-2">
+          {/* Photo upload */}
+          <div className="sm:col-span-2 flex justify-center">
+            <div className="relative cursor-pointer" onClick={() => fileRef.current?.click()}>
+              <Avatar className="h-24 w-24">
+                {previewUrl ? (
+                  <AvatarImage src={previewUrl} alt={form.nome} />
+                ) : null}
+                <AvatarFallback className="text-xl">{initials}</AvatarFallback>
+              </Avatar>
+              <div className="absolute bottom-0 right-0 rounded-full bg-primary p-1.5 text-primary-foreground">
+                <Camera className="h-4 w-4" />
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+            </div>
+          </div>
+          {uploading && <p className="sm:col-span-2 text-center text-sm text-muted-foreground">Enviando foto...</p>}
+
           <div className="space-y-2">
             <Label>Nome *</Label>
             <Input required value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
@@ -111,12 +160,12 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Nível</Label>
+            <Label>Nível de Complexidade</Label>
             <Select value={form.nivel_complexidade} onValueChange={(v: any) => setForm({ ...form, nivel_complexidade: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {Constants.public.Enums.nivel_complexidade.map((n) => (
-                  <SelectItem key={n} value={n}>{n.charAt(0).toUpperCase() + n.slice(1)}</SelectItem>
+                {NIVEL_OPTIONS.map((n) => (
+                  <SelectItem key={n.value} value={n.value}>{n.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

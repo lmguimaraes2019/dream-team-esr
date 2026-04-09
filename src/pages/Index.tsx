@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, DollarSign, TrendingUp } from "lucide-react";
+import { nivelLabel } from "@/lib/nivelLabels";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   PieChart, Pie, Cell, ResponsiveContainer,
@@ -12,6 +13,22 @@ const COLORS = [
   "hsl(221, 83%, 53%)", "hsl(160, 60%, 45%)", "hsl(30, 80%, 55%)",
   "hsl(280, 65%, 60%)", "hsl(340, 75%, 55%)",
 ];
+
+const GENDER_ICONS: Record<string, string> = {
+  Masculino: "♂",
+  Feminino: "♀",
+  Outro: "⚧",
+};
+
+const GenderTick = ({ x, y, payload }: any) => {
+  const icon = GENDER_ICONS[payload.value] || "";
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text x={0} y={0} dy={14} textAnchor="middle" fontSize={20}>{icon}</text>
+      <text x={0} y={0} dy={32} textAnchor="middle" fontSize={11} fill="hsl(var(--muted-foreground))">{payload.value}</text>
+    </g>
+  );
+};
 
 const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -121,7 +138,7 @@ export default function Index() {
     });
     setDistNivel(
       Object.entries(nivelMap).map(([k, v]) => ({
-        name: k.charAt(0).toUpperCase() + k.slice(1),
+        name: nivelLabel(k),
         value: v,
       }))
     );
@@ -202,10 +219,10 @@ export default function Index() {
             <Card>
               <CardHeader><CardTitle className="text-base">Salário Médio por Gênero</CardTitle></CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={salarioGenero}>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={salarioGenero} margin={{ bottom: 30 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="genero" />
+                    <XAxis dataKey="genero" tick={<GenderTick />} height={50} />
                     <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                     <Tooltip formatter={(v: number) => fmt(v)} />
                     <Bar dataKey="media" fill="hsl(221, 83%, 53%)" radius={[4, 4, 0, 0]} />

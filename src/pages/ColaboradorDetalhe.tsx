@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { differenceInYears, differenceInMonths, parseISO } from "date-fns";
+import { nivelLabel } from "@/lib/nivelLabels";
 import type { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import ColaboradorEditDialog from "@/components/ColaboradorEditDialog";
@@ -46,18 +48,33 @@ export default function ColaboradorDetalhe() {
   const mesesRestantes = differenceInMonths(now, admissao) % 12;
   const tempoCasa = `${anos} ano${anos !== 1 ? "s" : ""} e ${mesesRestantes} ${mesesRestantes !== 1 ? "meses" : "mês"}`;
 
+  const initials = colab.nome
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  const fotoUrl = (colab as any).foto_url;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/colaboradores"><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
-        <h1 className="text-3xl font-bold">{colab.nome}</h1>
-        <Badge variant={colab.tipo_vinculo === "clt" ? "default" : "outline"}>
-          {colab.tipo_vinculo.toUpperCase()}
-        </Badge>
+        <Avatar className="h-14 w-14">
+          {fotoUrl ? <AvatarImage src={fotoUrl} alt={colab.nome} /> : null}
+          <AvatarFallback className="text-lg">{initials}</AvatarFallback>
+        </Avatar>
+        <div>
+          <h1 className="text-3xl font-bold">{colab.nome}</h1>
+          <Badge variant={colab.tipo_vinculo === "clt" ? "default" : "outline"} className="mt-1">
+            {colab.tipo_vinculo.toUpperCase()}
+          </Badge>
+        </div>
         {isAdmin && (
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} className="ml-auto">
             <Pencil className="mr-2 h-4 w-4" />Editar
           </Button>
         )}
@@ -73,7 +90,6 @@ export default function ColaboradorDetalhe() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Dados gerais */}
         <Card>
           <CardHeader><CardTitle className="text-base">Dados Gerais</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
@@ -87,19 +103,17 @@ export default function ColaboradorDetalhe() {
           </CardContent>
         </Card>
 
-        {/* Estrutura */}
         <Card>
           <CardHeader><CardTitle className="text-base">Estrutura de Carreira</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             <Row label="Cargo" value={colab.cargo} />
             <Row label="Trajetória" value={colab.trajetoria} />
-            <Row label="Nível" value={colab.nivel_complexidade.charAt(0).toUpperCase() + colab.nivel_complexidade.slice(1)} />
+            <Row label="Nível de Complexidade" value={nivelLabel(colab.nivel_complexidade)} />
             <Row label="Grupo" value={String(colab.grupo)} />
           </CardContent>
         </Card>
       </div>
 
-      {/* Custos */}
       {custo ? (
         <Card>
           <CardHeader>
@@ -171,7 +185,7 @@ function CustoSection({ title, children }: { title: string; children: React.Reac
   );
 }
 
-function CustoItem({ label, value }: { label: string; value: number }) {
+function CustoItem({ label, value }: { label: number; value: number } | { label: string; value: number }) {
   return (
     <div className="flex justify-between text-sm">
       <span className="text-muted-foreground">{label}</span>

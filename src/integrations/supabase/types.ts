@@ -21,6 +21,7 @@ export type Database = {
           created_at: string
           data_admissao: string
           diretoria: string
+          foto_url: string | null
           genero: Database["public"]["Enums"]["genero"]
           gerencia: string
           grupo: number
@@ -39,6 +40,7 @@ export type Database = {
           created_at?: string
           data_admissao: string
           diretoria: string
+          foto_url?: string | null
           genero: Database["public"]["Enums"]["genero"]
           gerencia: string
           grupo: number
@@ -57,6 +59,7 @@ export type Database = {
           created_at?: string
           data_admissao?: string
           diretoria?: string
+          foto_url?: string | null
           genero?: Database["public"]["Enums"]["genero"]
           gerencia?: string
           grupo?: number
@@ -269,6 +272,10 @@ export type Database = {
         | "senior"
         | "especialista"
         | "master"
+        | "assistente"
+        | "gerente_01"
+        | "gerente_02"
+        | "gerente_03"
       tipo_vinculo: "clt" | "terceirizado"
     }
     CompositeTypes: {
@@ -405,6 +412,10 @@ export const Constants = {
         "senior",
         "especialista",
         "master",
+        "assistente",
+        "gerente_01",
+        "gerente_02",
+        "gerente_03",
       ],
       tipo_vinculo: ["clt", "terceirizado"],
     },
