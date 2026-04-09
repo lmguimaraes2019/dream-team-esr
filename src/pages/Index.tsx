@@ -228,6 +228,35 @@ export default function Index() {
         </Card>
       </div>
 
+      {/* Colaboradores ausentes */}
+      {ausentes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Colaboradores Ausentes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
+              {ausentes.map((a) => (
+                <div key={a.id} className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-3">
+                    <Link
+                      to={`/colaboradores/${a.colaborador_id}`}
+                      className="font-medium hover:underline text-sm"
+                    >
+                      {(a.colaboradores as any)?.nome || "—"}
+                    </Link>
+                    <AusenciaBadge tipo={a.tipo} />
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {format(parseISO(a.data_inicio), "dd/MM/yyyy")} — {format(parseISO(a.data_fim), "dd/MM/yyyy")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {totalColab === 0 ? (
         <Card>
           <CardContent className="p-12 text-center text-muted-foreground">
