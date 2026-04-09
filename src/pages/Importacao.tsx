@@ -116,16 +116,27 @@ export default function Importacao() {
   const handleConfirm = async () => {
     if (!user) return;
     setSaving(true);
+    setImportErrors([]);
+    setImportResult(null);
+
+    const errors: { row: number; error: string }[] = [];
+    let successCount = 0;
 
     try {
-      // Get tax rates
       const { data: taxas } = await supabase.from("configuracoes_encargos").select("*");
       const taxaINSS = taxas?.find((t) => t.nome.toLowerCase().includes("inss"))?.taxa || 0.2;
       const taxaFGTS = taxas?.find((t) => t.nome.toLowerCase().includes("fgts"))?.taxa || 0.08;
       const taxaPIS = taxas?.find((t) => t.nome.toLowerCase().includes("pis"))?.taxa || 0.01;
 
-      for (const row of preview) {
-        // Upsert colaborador
+      for (let i = 0; i < preview.length; i++) {
+        const row = preview[i];
+
+        // Validate required fields
+        if (!row.nome || !row.matricula) {
+          errors.push({ row: i + 2, error: "Nome ou matrícula vazios" });
+          continue;
+        }
+
         const { data: colab, error: colabErr } = await supabase
           .from("colaboradores")
           .upsert(
@@ -148,7 +159,10 @@ export default function Importacao() {
           .select("id")
           .single();
 
-        if (colabErr || !colab) continue;
+        if (colabErr || !colab) {
+          errors.push({ row: i + 2, error: colabErr?.message || "Erro ao salvar colaborador" });
+          continue;
+        }
 
         const salario = row.salario_base;
         const inss = salario * Number(taxaINSS);
@@ -162,7 +176,7 @@ export default function Importacao() {
           row.vr_va + row.vt + row.plano_saude + row.seguro + row.internet +
           ferias + umTercoFerias + decimoTerceiro;
 
-        await supabase.from("custos_mensais").upsert(
+        const { error: custoErr } = await supabase.from("custos_mensais").upsert(
           {
             colaborador_id: colab.id,
             mes_referencia: mesRef,
@@ -183,6 +197,12 @@ export default function Importacao() {
           },
           { onConflict: "colaborador_id,mes_referencia" }
         );
+
+        if (custoErr) {
+          errors.push({ row: i + 2, error: `Custo: ${custoErr.message}` });
+        } else {
+          successCount++;
+        }
       }
 
       // Log import
@@ -190,13 +210,20 @@ export default function Importacao() {
         user_id: user.id,
         nome_arquivo: fileName,
         mes_referencia: mesRef,
-        qtd_registros: preview.length,
-        status: "concluido",
+        qtd_registros: successCount,
+        status: errors.length > 0 ? (successCount > 0 ? "parcial" : "erro") : "concluido",
       });
 
-      toast({ title: "Importação concluída!", description: `${preview.length} registros importados.` });
-      setPreview([]);
-      setFileName("");
+      setImportErrors(errors);
+      setImportResult({ success: successCount, failed: errors.length });
+
+      if (successCount > 0) {
+        toast({ title: "Importação concluída!", description: `${successCount} de ${preview.length} registros importados.` });
+        setPreview([]);
+        setFileName("");
+      } else {
+        toast({ title: "Nenhum registro importado", description: "Verifique os erros abaixo.", variant: "destructive" });
+      }
 
       // Refresh history
       const { data: hist } = await supabase
