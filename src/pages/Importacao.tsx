@@ -32,6 +32,7 @@ interface PreviewRow {
   nivel_complexidade: string;
   grupo: number;
   tipo_vinculo: string;
+  origem_recurso: string;
   custos: CustosCalculados;
 }
 
@@ -172,6 +173,7 @@ export default function Importacao() {
           nivel_complexidade: nivel,
           grupo: Number(get(row, "grupo")) || 1,
           tipo_vinculo: tipoVinculo,
+          origem_recurso: String(get(row, "origem_recurso") || "").trim(),
           custos,
         };
       });
