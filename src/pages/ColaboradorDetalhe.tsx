@@ -56,7 +56,21 @@ export default function ColaboradorDetalhe() {
         <Badge variant={colab.tipo_vinculo === "clt" ? "default" : "outline"}>
           {colab.tipo_vinculo.toUpperCase()}
         </Badge>
+        {isAdmin && (
+          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            <Pencil className="mr-2 h-4 w-4" />Editar
+          </Button>
+        )}
       </div>
+
+      {isAdmin && (
+        <ColaboradorEditDialog
+          colaborador={colab}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          onSaved={loadData}
+        />
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         {/* Dados gerais */}
