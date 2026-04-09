@@ -39,20 +39,22 @@ export default function Colaboradores() {
 
   const filtered = colaboradores.filter((c) => {
     const matchSearch = c.nome.toLowerCase().includes(search.toLowerCase()) ||
-      c.matricula.toLowerCase().includes(search.toLowerCase());
+      (c.matricula || "").toLowerCase().includes(search.toLowerCase());
     const matchGerencia = filtroGerencia === "all" || c.gerencia === filtroGerencia;
     const matchNivel = filtroNivel === "all" || c.nivel_complexidade === filtroNivel;
     const matchVinculo = filtroVinculo === "all" || c.tipo_vinculo === filtroVinculo;
     return matchSearch && matchGerencia && matchNivel && matchVinculo;
   });
 
-  const [form, setForm] = useState<Partial<TablesInsert<"colaboradores">>>({
+  const [form, setForm] = useState<Partial<TablesInsert<"colaboradores">> & Record<string, any>>({
     genero: "masculino",
     nivel_complexidade: "junior",
     tipo_vinculo: "clt",
     grupo: 1,
     lideranca: false,
   });
+
+  const formIsTerceirizado = form.tipo_vinculo === "terceirizado";
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,9 +87,53 @@ export default function Colaboradores() {
                   <Input required value={form.nome || ""} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Matrícula *</Label>
-                  <Input required value={form.matricula || ""} onChange={(e) => setForm({ ...form, matricula: e.target.value })} />
+                  <Label>Tipo de Vínculo</Label>
+                  <Select value={form.tipo_vinculo} onValueChange={(v: any) => setForm({ ...form, tipo_vinculo: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Constants.public.Enums.tipo_vinculo.map((t) => (
+                        <SelectItem key={t} value={t}>{t.toUpperCase()}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {/* CLT fields */}
+                {!formIsTerceirizado && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Matrícula *</Label>
+                      <Input required value={form.matricula || ""} onChange={(e) => setForm({ ...form, matricula: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Origem de Recurso</Label>
+                      <Input value={form.origem_recurso || ""} onChange={(e) => setForm({ ...form, origem_recurso: e.target.value })} />
+                    </div>
+                  </>
+                )}
+
+                {/* Terceirizado fields */}
+                {formIsTerceirizado && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Empresa Terceirizada *</Label>
+                      <Input required value={form.empresa_terceirizada || ""} onChange={(e) => setForm({ ...form, empresa_terceirizada: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Custo Mensal (R$)</Label>
+                      <Input type="number" step="0.01" value={form.custo_mensal_terceirizado || ""} onChange={(e) => setForm({ ...form, custo_mensal_terceirizado: Number(e.target.value) })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Duração do Contrato</Label>
+                      <Input placeholder="Ex: 12 meses" value={form.duracao_contrato || ""} onChange={(e) => setForm({ ...form, duracao_contrato: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Gestor do Contrato</Label>
+                      <Input value={form.gestor_contrato || ""} onChange={(e) => setForm({ ...form, gestor_contrato: e.target.value })} />
+                    </div>
+                  </>
+                )}
+
                 <div className="space-y-2">
                   <Label>Gênero</Label>
                   <Select value={form.genero} onValueChange={(v: any) => setForm({ ...form, genero: v })}>
@@ -144,17 +190,6 @@ export default function Colaboradores() {
                     <SelectContent>
                       <SelectItem value="1">1</SelectItem>
                       <SelectItem value="2">2</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Tipo de Vínculo</Label>
-                  <Select value={form.tipo_vinculo} onValueChange={(v: any) => setForm({ ...form, tipo_vinculo: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Constants.public.Enums.tipo_vinculo.map((t) => (
-                        <SelectItem key={t} value={t}>{t.toUpperCase()}</SelectItem>
-                      ))}
                     </SelectContent>
                   </Select>
                 </div>
