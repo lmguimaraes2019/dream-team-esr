@@ -228,13 +228,17 @@ export default function Index() {
             <Card>
               <CardHeader><CardTitle className="text-base">Salário Médio por Gênero</CardTitle></CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={salarioGenero} margin={{ bottom: 30 }}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={salarioGenero} margin={{ bottom: 50 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="genero" tick={<GenderTick />} height={50} />
+                    <XAxis dataKey="genero" tick={<GenderTick />} height={65} />
                     <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                     <Tooltip formatter={(v: number) => fmt(v)} />
-                    <Bar dataKey="media" fill="hsl(221, 83%, 53%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="media" radius={[4, 4, 0, 0]}>
+                      {salarioGenero.map((entry, i) => (
+                        <Cell key={i} fill={GENDER_COLORS[entry.genero] || COLORS[0]} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
