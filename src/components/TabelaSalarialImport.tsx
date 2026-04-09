@@ -234,9 +234,20 @@ export default function TabelaSalarialImport() {
 
   const handleSave = async () => {
     if (faixas.length === 0) return;
-    await supabase.from("tabela_salarial").delete().neq("id", "00000000-0000-0000-0000-000000000000") as any;
+    // Delete all existing rows first, then insert
+    const { error: delError } = await supabase.from("tabela_salarial").delete().neq("id", "00000000-0000-0000-0000-000000000000") as any;
+    if (delError) {
+      toast({ title: "Erro ao limpar tabela", description: delError.message, variant: "destructive" });
+      return;
+    }
+    // Deduplicate by trajetoria+nivel+grupo (keep last)
+    const unique = new Map<string, FaixaRow>();
+    for (const f of faixas) {
+      unique.set(`${f.trajetoria}|${f.nivel_complexidade}|${f.grupo}`, f);
+    }
+    const deduped = [...unique.values()];
     const { error } = await supabase.from("tabela_salarial").insert(
-      faixas.map(f => ({
+      deduped.map(f => ({
         trajetoria: f.trajetoria,
         nivel_complexidade: f.nivel_complexidade,
         grupo: f.grupo,
@@ -247,7 +258,7 @@ export default function TabelaSalarialImport() {
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Tabela salarial salva!", description: `${faixas.length} faixas importadas.` });
+      toast({ title: "Tabela salarial salva!", description: `${deduped.length} faixas importadas.` });
       setFaixas([]);
       loadSaved();
     }
