@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      ausencias: {
+        Row: {
+          colaborador_id: string
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          id: string
+          observacao: string | null
+          tipo: Database["public"]["Enums"]["tipo_ausencia"]
+        }
+        Insert: {
+          colaborador_id: string
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          id?: string
+          observacao?: string | null
+          tipo: Database["public"]["Enums"]["tipo_ausencia"]
+        }
+        Update: {
+          colaborador_id?: string
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          id?: string
+          observacao?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_ausencia"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ausencias_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       colaboradores: {
         Row: {
           ativo: boolean
@@ -345,6 +383,7 @@ export type Database = {
         | "gerente_01"
         | "gerente_02"
         | "gerente_03"
+      tipo_ausencia: "ferias" | "licenca_medica" | "licenca_maternidade"
       tipo_vinculo: "clt" | "terceirizado"
     }
     CompositeTypes: {
@@ -486,6 +525,7 @@ export const Constants = {
         "gerente_02",
         "gerente_03",
       ],
+      tipo_ausencia: ["ferias", "licenca_medica", "licenca_maternidade"],
       tipo_vinculo: ["clt", "terceirizado"],
     },
   },
