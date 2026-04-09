@@ -8,9 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileSpreadsheet, Check } from "lucide-react";
+import { Upload, FileSpreadsheet, Check, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Tables } from "@/integrations/supabase/types";
+import { normalizeGenero, normalizeNivel, normalizeVinculo, excelDateToISO } from "@/lib/importNormalization";
 
 interface PreviewRow {
   nome: string;
@@ -48,6 +50,8 @@ export default function Importacao() {
   });
   const [saving, setSaving] = useState(false);
   const [historico, setHistorico] = useState<Tables<"importacoes">[]>([]);
+  const [importErrors, setImportErrors] = useState<{ row: number; error: string }[]>([]);
+  const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
@@ -77,19 +81,22 @@ export default function Importacao() {
         const norm: Record<string, any> = {};
         Object.entries(row).forEach(([k, v]) => { norm[normalizeHeader(k)] = v; });
 
+        const rawDate = norm.data_admissao || norm.data_de_admissao || "";
+        const parsedDate = excelDateToISO(rawDate);
+
         return {
           nome: String(norm.nome || ""),
           matricula: String(norm.matricula || ""),
-          genero: (norm.genero || "outro").toLowerCase(),
+          genero: normalizeGenero(String(norm.genero || "outro")) || "outro",
           lideranca: ["sim", "true", "1", "s"].includes(String(norm.lideranca || "").toLowerCase()),
-          data_admissao: norm.data_admissao || norm.data_de_admissao || "",
+          data_admissao: parsedDate || String(rawDate),
           gerencia: String(norm.gerencia || ""),
           diretoria: String(norm.diretoria || ""),
           cargo: String(norm.cargo || ""),
           trajetoria: String(norm.trajetoria || ""),
-          nivel_complexidade: (norm.nivel_complexidade || norm.nivel || "junior").toLowerCase(),
+          nivel_complexidade: normalizeNivel(String(norm.nivel_complexidade || norm.nivel || "junior")) || "junior",
           grupo: Number(norm.grupo) || 1,
-          tipo_vinculo: (norm.tipo_vinculo || norm.vinculo || "clt").toLowerCase(),
+          tipo_vinculo: normalizeVinculo(String(norm.tipo_vinculo || norm.vinculo || "clt")) || "clt",
           salario_base: Number(norm.salario_base || norm.salario || 0),
           vr_va: Number(norm.vr_va || norm.vr || norm.va || 0),
           vt: Number(norm.vt || 0),
@@ -100,6 +107,8 @@ export default function Importacao() {
       });
 
       setPreview(rows);
+      setImportErrors([]);
+      setImportResult(null);
     };
     reader.readAsArrayBuffer(file);
   };
@@ -107,16 +116,27 @@ export default function Importacao() {
   const handleConfirm = async () => {
     if (!user) return;
     setSaving(true);
+    setImportErrors([]);
+    setImportResult(null);
+
+    const errors: { row: number; error: string }[] = [];
+    let successCount = 0;
 
     try {
-      // Get tax rates
       const { data: taxas } = await supabase.from("configuracoes_encargos").select("*");
       const taxaINSS = taxas?.find((t) => t.nome.toLowerCase().includes("inss"))?.taxa || 0.2;
       const taxaFGTS = taxas?.find((t) => t.nome.toLowerCase().includes("fgts"))?.taxa || 0.08;
       const taxaPIS = taxas?.find((t) => t.nome.toLowerCase().includes("pis"))?.taxa || 0.01;
 
-      for (const row of preview) {
-        // Upsert colaborador
+      for (let i = 0; i < preview.length; i++) {
+        const row = preview[i];
+
+        // Validate required fields
+        if (!row.nome || !row.matricula) {
+          errors.push({ row: i + 2, error: "Nome ou matrícula vazios" });
+          continue;
+        }
+
         const { data: colab, error: colabErr } = await supabase
           .from("colaboradores")
           .upsert(
@@ -139,7 +159,10 @@ export default function Importacao() {
           .select("id")
           .single();
 
-        if (colabErr || !colab) continue;
+        if (colabErr || !colab) {
+          errors.push({ row: i + 2, error: colabErr?.message || "Erro ao salvar colaborador" });
+          continue;
+        }
 
         const salario = row.salario_base;
         const inss = salario * Number(taxaINSS);
@@ -153,7 +176,7 @@ export default function Importacao() {
           row.vr_va + row.vt + row.plano_saude + row.seguro + row.internet +
           ferias + umTercoFerias + decimoTerceiro;
 
-        await supabase.from("custos_mensais").upsert(
+        const { error: custoErr } = await supabase.from("custos_mensais").upsert(
           {
             colaborador_id: colab.id,
             mes_referencia: mesRef,
@@ -174,6 +197,12 @@ export default function Importacao() {
           },
           { onConflict: "colaborador_id,mes_referencia" }
         );
+
+        if (custoErr) {
+          errors.push({ row: i + 2, error: `Custo: ${custoErr.message}` });
+        } else {
+          successCount++;
+        }
       }
 
       // Log import
@@ -181,13 +210,20 @@ export default function Importacao() {
         user_id: user.id,
         nome_arquivo: fileName,
         mes_referencia: mesRef,
-        qtd_registros: preview.length,
-        status: "concluido",
+        qtd_registros: successCount,
+        status: errors.length > 0 ? (successCount > 0 ? "parcial" : "erro") : "concluido",
       });
 
-      toast({ title: "Importação concluída!", description: `${preview.length} registros importados.` });
-      setPreview([]);
-      setFileName("");
+      setImportErrors(errors);
+      setImportResult({ success: successCount, failed: errors.length });
+
+      if (successCount > 0) {
+        toast({ title: "Importação concluída!", description: `${successCount} de ${preview.length} registros importados.` });
+        setPreview([]);
+        setFileName("");
+      } else {
+        toast({ title: "Nenhum registro importado", description: "Verifique os erros abaixo.", variant: "destructive" });
+      }
 
       // Refresh history
       const { data: hist } = await supabase
@@ -288,7 +324,27 @@ export default function Importacao() {
         </Card>
       )}
 
-      {/* History */}
+      {/* Import Result / Errors */}
+      {importResult && (
+        <Alert variant={importResult.failed > 0 ? "destructive" : "default"}>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>{importResult.success}</strong> de {importResult.success + importResult.failed} registros importados com sucesso.
+            {importResult.failed > 0 && (
+              <details className="mt-2">
+                <summary className="cursor-pointer text-sm">Ver {importResult.failed} erro(s)</summary>
+                <ul className="mt-1 text-xs space-y-1">
+                  {importErrors.map((e, i) => (
+                    <li key={i}>Linha {e.row}: {e.error}</li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
+
       <Card>
         <CardHeader><CardTitle className="text-base">Histórico de Importações</CardTitle></CardHeader>
         <CardContent>
