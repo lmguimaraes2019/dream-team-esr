@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Constants } from "@/integrations/supabase/types";
+import { NIVEL_OPTIONS, nivelLabel } from "@/lib/nivelLabels";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
 type Colaborador = Tables<"colaboradores">;
@@ -126,12 +127,12 @@ export default function Colaboradores() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Nível</Label>
+                  <Label>Nível de Complexidade</Label>
                   <Select value={form.nivel_complexidade} onValueChange={(v: any) => setForm({ ...form, nivel_complexidade: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {Constants.public.Enums.nivel_complexidade.map((n) => (
-                        <SelectItem key={n} value={n}>{n.charAt(0).toUpperCase() + n.slice(1)}</SelectItem>
+                      {NIVEL_OPTIONS.map((n) => (
+                        <SelectItem key={n.value} value={n.value}>{n.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -196,11 +197,11 @@ export default function Colaboradores() {
           </SelectContent>
         </Select>
         <Select value={filtroNivel} onValueChange={setFiltroNivel}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="Nível" /></SelectTrigger>
+          <SelectTrigger className="w-48"><SelectValue placeholder="Nível de Complexidade" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
-            {Constants.public.Enums.nivel_complexidade.map((n) => (
-              <SelectItem key={n} value={n}>{n.charAt(0).toUpperCase() + n.slice(1)}</SelectItem>
+            {NIVEL_OPTIONS.map((n) => (
+              <SelectItem key={n.value} value={n.value}>{n.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -224,7 +225,7 @@ export default function Colaboradores() {
               <TableHead>Matrícula</TableHead>
               <TableHead>Gerência</TableHead>
               <TableHead>Cargo</TableHead>
-              <TableHead>Nível</TableHead>
+              <TableHead>Nível de Complexidade</TableHead>
               <TableHead>Vínculo</TableHead>
             </TableRow>
           </TableHeader>
@@ -241,7 +242,7 @@ export default function Colaboradores() {
                 <TableCell>{c.cargo}</TableCell>
                 <TableCell>
                   <Badge variant="secondary">
-                    {c.nivel_complexidade.charAt(0).toUpperCase() + c.nivel_complexidade.slice(1)}
+                    {nivelLabel(c.nivel_complexidade)}
                   </Badge>
                 </TableCell>
                 <TableCell>
