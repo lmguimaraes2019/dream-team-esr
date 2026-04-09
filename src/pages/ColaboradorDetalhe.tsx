@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { differenceInYears, differenceInMonths, parseISO } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
+import { useAuth } from "@/contexts/AuthContext";
+import ColaboradorEditDialog from "@/components/ColaboradorEditDialog";
 
 type Colaborador = Tables<"colaboradores">;
 type CustoMensal = Tables<"custos_mensais">;
@@ -18,8 +20,10 @@ export default function ColaboradorDetalhe() {
   const { id } = useParams<{ id: string }>();
   const [colab, setColab] = useState<Colaborador | null>(null);
   const [custo, setCusto] = useState<CustoMensal | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const { isAdmin } = useAuth();
 
-  useEffect(() => {
+  const loadData = () => {
     if (!id) return;
     supabase.from("colaboradores").select("*").eq("id", id).single().then(({ data }) => setColab(data));
     supabase
@@ -30,7 +34,9 @@ export default function ColaboradorDetalhe() {
       .limit(1)
       .maybeSingle()
       .then(({ data }) => setCusto(data));
-  }, [id]);
+  };
+
+  useEffect(() => { loadData(); }, [id]);
 
   if (!colab) return <div className="p-8 text-muted-foreground">Carregando...</div>;
 
