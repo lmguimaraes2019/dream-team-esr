@@ -56,6 +56,7 @@ export default function Index() {
   const [custoGerencia, setCustoGerencia] = useState<any[]>([]);
   const [distNivel, setDistNivel] = useState<any[]>([]);
   const [distTrajetoria, setDistTrajetoria] = useState<any[]>([]);
+  const [ausentes, setAusentes] = useState<any[]>([]);
 
   useEffect(() => {
     supabase
