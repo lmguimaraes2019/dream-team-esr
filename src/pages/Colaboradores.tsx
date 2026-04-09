@@ -296,7 +296,12 @@ export default function Colaboradores() {
                 className="cursor-pointer"
                 onClick={() => navigate(`/colaboradores/${c.id}`)}
               >
-                <TableCell className="font-medium">{c.nome}</TableCell>
+                <TableCell className="font-medium">
+                  <span className="flex items-center gap-2">
+                    {c.nome}
+                    {ausenciasAtivas[c.id] && <AusenciaBadge tipo={ausenciasAtivas[c.id]} />}
+                  </span>
+                </TableCell>
                 <TableCell>{c.tipo_vinculo === "terceirizado" ? (c as any).empresa_terceirizada || "—" : c.matricula || "—"}</TableCell>
                 <TableCell>{c.gerencia}</TableCell>
                 <TableCell>{c.cargo}</TableCell>
