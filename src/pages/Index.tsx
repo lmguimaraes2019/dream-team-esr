@@ -138,7 +138,7 @@ export default function Index() {
     });
     setDistNivel(
       Object.entries(nivelMap).map(([k, v]) => ({
-        name: k.charAt(0).toUpperCase() + k.slice(1),
+        name: nivelLabel(k),
         value: v,
       }))
     );
