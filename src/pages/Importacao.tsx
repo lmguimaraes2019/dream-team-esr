@@ -8,11 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileSpreadsheet, Check, AlertTriangle } from "lucide-react";
+import { Check, AlertTriangle, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Tables } from "@/integrations/supabase/types";
-import { normalizeGenero, normalizeNivel, normalizeVinculo, excelDateToISO } from "@/lib/importNormalization";
+import {
+  normalizeGenero, normalizeNivel, normalizeVinculo,
+  excelDateToISO, nivelFromCargo, isLideranca,
+  normalizeHeader, mapHeader,
+} from "@/lib/importNormalization";
 
 interface PreviewRow {
   nome: string;
@@ -28,18 +32,20 @@ interface PreviewRow {
   grupo: number;
   tipo_vinculo: string;
   salario_base: number;
+  inss: number;
+  fgts: number;
+  pis: number;
   vr_va: number;
   vt: number;
   plano_saude: number;
   seguro: number;
   internet: number;
+  ferias: number;
+  um_terco_ferias: number;
+  decimo_terceiro: number;
+  custo_mensal: number;
+  custo_anual: number;
 }
-
-const normalizeHeader = (h: string) =>
-  h.toLowerCase().trim()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, "_")
-    .replace(/[^a-z0-9_]/g, "");
 
 export default function Importacao() {
   const [preview, setPreview] = useState<PreviewRow[]>([]);
@@ -52,6 +58,7 @@ export default function Importacao() {
   const [historico, setHistorico] = useState<Tables<"importacoes">[]>([]);
   const [importErrors, setImportErrors] = useState<{ row: number; error: string }[]>([]);
   const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null);
+  const [parseWarnings, setParseWarnings] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
@@ -69,46 +76,140 @@ export default function Importacao() {
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
+    setParseWarnings([]);
 
     const reader = new FileReader();
     reader.onload = (evt) => {
       const data = new Uint8Array(evt.target?.result as ArrayBuffer);
       const wb = XLSX.read(data, { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json<Record<string, any>>(ws);
 
-      const rows: PreviewRow[] = json.map((row) => {
-        const norm: Record<string, any> = {};
-        Object.entries(row).forEach(([k, v]) => { norm[normalizeHeader(k)] = v; });
+      // Get raw 2D array to find the header row
+      const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
-        const rawDate = norm.data_admissao || norm.data_de_admissao || "";
+      // Find header row: look for a row containing "Matrícula" and "Nome"
+      let headerIdx = -1;
+      for (let i = 0; i < Math.min(rawRows.length, 15); i++) {
+        const vals = (rawRows[i] || []).map((v: any) => normalizeHeader(String(v || "")));
+        if (vals.includes("matricula") && vals.includes("nome")) {
+          headerIdx = i;
+          break;
+        }
+      }
+
+      if (headerIdx === -1) {
+        toast({ title: "Cabeçalho não encontrado", description: "A planilha deve ter colunas 'Matrícula' e 'Nome'.", variant: "destructive" });
+        return;
+      }
+
+      // Build column mapping
+      const rawHeaders: string[] = rawRows[headerIdx].map((v: any) => String(v || ""));
+      const colMap: Record<string, number> = {};
+      const warnings: string[] = [];
+      const unmapped: string[] = [];
+
+      rawHeaders.forEach((h, idx) => {
+        if (!h.trim()) return;
+        const mapped = mapHeader(h);
+        if (mapped) {
+          colMap[mapped] = idx;
+        } else {
+          unmapped.push(h);
+        }
+      });
+
+      if (unmapped.length > 0) {
+        warnings.push(`Colunas ignoradas: ${unmapped.join(", ")}`);
+      }
+
+      // Required columns check
+      if (!("matricula" in colMap) || !("nome" in colMap)) {
+        toast({ title: "Colunas obrigatórias ausentes", description: "Precisa de 'Matrícula' e 'Nome'.", variant: "destructive" });
+        return;
+      }
+
+      const get = (row: any[], field: string): any => {
+        const idx = colMap[field];
+        return idx !== undefined ? row[idx] : undefined;
+      };
+
+      const dataRows = rawRows.slice(headerIdx + 1).filter((row) =>
+        row && row.length > 0 && get(row, "matricula") && get(row, "nome")
+      );
+
+      const rows: PreviewRow[] = dataRows.map((row) => {
+        const rawDate = get(row, "data_admissao") || "";
         const parsedDate = excelDateToISO(rawDate);
+        const cargo = String(get(row, "cargo") || "");
+        const salario = Number(get(row, "salario_base") || 0);
+
+        // Use spreadsheet values if available, otherwise calculate
+        const inss = Number(get(row, "inss") || 0);
+        const fgts = Number(get(row, "fgts") || 0);
+        const pis = Number(get(row, "pis") || 0);
+        const vrVa = Number(get(row, "vr_va") || 0);
+        const vt = Number(get(row, "vt") || 0);
+        const planoSaude = Number(get(row, "plano_saude") || 0);
+        const seguro = Number(get(row, "seguro") || 0);
+        const internet = Number(get(row, "internet") || 0);
+        const ferias = Number(get(row, "ferias") || 0);
+        const umTercoFerias = Number(get(row, "um_terco_ferias") || 0);
+        const decimoTerceiro = Number(get(row, "decimo_terceiro") || 0);
+
+        const custoMensal = Number(get(row, "custo_mensal") || 0) ||
+          (salario + inss + fgts + pis + vrVa + vt + planoSaude + seguro + internet + ferias + umTercoFerias + decimoTerceiro);
+
+        // Determine nivel from column or infer from cargo
+        const rawNivel = get(row, "nivel_complexidade");
+        const nivel = rawNivel ? (normalizeNivel(String(rawNivel)) || nivelFromCargo(cargo)) : nivelFromCargo(cargo);
+
+        // Determine genero
+        const rawGenero = get(row, "genero");
+        const genero = rawGenero ? (normalizeGenero(String(rawGenero)) || "outro") : "outro";
+
+        // Determine vinculo
+        const rawVinculo = get(row, "tipo_vinculo");
+        const tipoVinculo = rawVinculo ? (normalizeVinculo(String(rawVinculo)) || "clt") : "clt";
+
+        // Determine lideranca
+        const rawLideranca = get(row, "lideranca");
+        const lideranca = rawLideranca
+          ? ["sim", "true", "1", "s"].includes(String(rawLideranca).toLowerCase())
+          : isLideranca(cargo);
 
         return {
-          nome: String(norm.nome || ""),
-          matricula: String(norm.matricula || ""),
-          genero: normalizeGenero(String(norm.genero || "outro")) || "outro",
-          lideranca: ["sim", "true", "1", "s"].includes(String(norm.lideranca || "").toLowerCase()),
+          nome: String(get(row, "nome") || "").trim(),
+          matricula: String(get(row, "matricula") || "").trim(),
+          genero,
+          lideranca,
           data_admissao: parsedDate || String(rawDate),
-          gerencia: String(norm.gerencia || ""),
-          diretoria: String(norm.diretoria || ""),
-          cargo: String(norm.cargo || ""),
-          trajetoria: String(norm.trajetoria || ""),
-          nivel_complexidade: normalizeNivel(String(norm.nivel_complexidade || norm.nivel || "junior")) || "junior",
-          grupo: Number(norm.grupo) || 1,
-          tipo_vinculo: normalizeVinculo(String(norm.tipo_vinculo || norm.vinculo || "clt")) || "clt",
-          salario_base: Number(norm.salario_base || norm.salario || 0),
-          vr_va: Number(norm.vr_va || norm.vr || norm.va || 0),
-          vt: Number(norm.vt || 0),
-          plano_saude: Number(norm.plano_saude || norm.plano_de_saude || 0),
-          seguro: Number(norm.seguro || 0),
-          internet: Number(norm.internet || 0),
+          gerencia: String(get(row, "gerencia") || "").trim(),
+          diretoria: String(get(row, "diretoria") || "").trim(),
+          cargo: cargo.trim(),
+          trajetoria: String(get(row, "trajetoria") || "").trim(),
+          nivel_complexidade: nivel,
+          grupo: Number(get(row, "grupo")) || 1,
+          tipo_vinculo: tipoVinculo,
+          salario_base: salario,
+          inss, fgts, pis,
+          vr_va: vrVa, vt,
+          plano_saude: planoSaude,
+          seguro, internet,
+          ferias, um_terco_ferias: umTercoFerias,
+          decimo_terceiro: decimoTerceiro,
+          custo_mensal: Math.round(custoMensal * 100) / 100,
+          custo_anual: Math.round(custoMensal * 12 * 100) / 100,
         };
       });
 
       setPreview(rows);
       setImportErrors([]);
       setImportResult(null);
+      setParseWarnings(warnings);
+
+      if (rows.length === 0) {
+        toast({ title: "Nenhum registro encontrado", description: "Verifique se a planilha tem dados abaixo do cabeçalho.", variant: "destructive" });
+      }
     };
     reader.readAsArrayBuffer(file);
   };
@@ -123,15 +224,9 @@ export default function Importacao() {
     let successCount = 0;
 
     try {
-      const { data: taxas } = await supabase.from("configuracoes_encargos").select("*");
-      const taxaINSS = taxas?.find((t) => t.nome.toLowerCase().includes("inss"))?.taxa || 0.2;
-      const taxaFGTS = taxas?.find((t) => t.nome.toLowerCase().includes("fgts"))?.taxa || 0.08;
-      const taxaPIS = taxas?.find((t) => t.nome.toLowerCase().includes("pis"))?.taxa || 0.01;
-
       for (let i = 0; i < preview.length; i++) {
         const row = preview[i];
 
-        // Validate required fields
         if (!row.nome || !row.matricula) {
           errors.push({ row: i + 2, error: "Nome ou matrícula vazios" });
           continue;
@@ -164,36 +259,24 @@ export default function Importacao() {
           continue;
         }
 
-        const salario = row.salario_base;
-        const inss = salario * Number(taxaINSS);
-        const fgts = salario * Number(taxaFGTS);
-        const pis = salario * Number(taxaPIS);
-        const ferias = salario / 12;
-        const umTercoFerias = ferias / 3;
-        const decimoTerceiro = salario / 12;
-        const custoMensal =
-          salario + inss + fgts + pis +
-          row.vr_va + row.vt + row.plano_saude + row.seguro + row.internet +
-          ferias + umTercoFerias + decimoTerceiro;
-
         const { error: custoErr } = await supabase.from("custos_mensais").upsert(
           {
             colaborador_id: colab.id,
             mes_referencia: mesRef,
-            salario_base: salario,
-            inss: Math.round(inss * 100) / 100,
-            fgts: Math.round(fgts * 100) / 100,
-            pis: Math.round(pis * 100) / 100,
+            salario_base: row.salario_base,
+            inss: Math.round(row.inss * 100) / 100,
+            fgts: Math.round(row.fgts * 100) / 100,
+            pis: Math.round(row.pis * 100) / 100,
             vr_va: row.vr_va,
             vt: row.vt,
             plano_saude: row.plano_saude,
             seguro: row.seguro,
             internet: row.internet,
-            ferias: Math.round(ferias * 100) / 100,
-            um_terco_ferias: Math.round(umTercoFerias * 100) / 100,
-            decimo_terceiro: Math.round(decimoTerceiro * 100) / 100,
-            custo_mensal: Math.round(custoMensal * 100) / 100,
-            custo_anual: Math.round(custoMensal * 12 * 100) / 100,
+            ferias: Math.round(row.ferias * 100) / 100,
+            um_terco_ferias: Math.round(row.um_terco_ferias * 100) / 100,
+            decimo_terceiro: Math.round(row.decimo_terceiro * 100) / 100,
+            custo_mensal: row.custo_mensal,
+            custo_anual: row.custo_anual,
           },
           { onConflict: "colaborador_id,mes_referencia" }
         );
@@ -205,7 +288,6 @@ export default function Importacao() {
         }
       }
 
-      // Log import
       await supabase.from("importacoes").insert({
         user_id: user.id,
         nome_arquivo: fileName,
@@ -225,7 +307,6 @@ export default function Importacao() {
         toast({ title: "Nenhum registro importado", description: "Verifique os erros abaixo.", variant: "destructive" });
       }
 
-      // Refresh history
       const { data: hist } = await supabase
         .from("importacoes")
         .select("*")
@@ -272,6 +353,14 @@ export default function Importacao() {
                 {fileName} — {preview.length} registros
               </div>
             )}
+            {parseWarnings.length > 0 && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  {parseWarnings.map((w, i) => <p key={i} className="text-xs">{w}</p>)}
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -282,7 +371,6 @@ export default function Importacao() {
         </Card>
       )}
 
-      {/* Preview */}
       {preview.length > 0 && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -302,6 +390,7 @@ export default function Importacao() {
                     <TableHead>Cargo</TableHead>
                     <TableHead>Nível</TableHead>
                     <TableHead>Salário</TableHead>
+                    <TableHead>Custo Mensal</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -311,9 +400,14 @@ export default function Importacao() {
                       <TableCell>{r.matricula}</TableCell>
                       <TableCell>{r.gerencia}</TableCell>
                       <TableCell>{r.cargo}</TableCell>
-                      <TableCell>{r.nivel_complexidade}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{r.nivel_complexidade}</Badge>
+                      </TableCell>
                       <TableCell>
                         {r.salario_base.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </TableCell>
+                      <TableCell>
+                        {r.custo_mensal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -324,7 +418,6 @@ export default function Importacao() {
         </Card>
       )}
 
-      {/* Import Result / Errors */}
       {importResult && (
         <Alert variant={importResult.failed > 0 ? "destructive" : "default"}>
           <AlertTriangle className="h-4 w-4" />
@@ -343,7 +436,6 @@ export default function Importacao() {
           </AlertDescription>
         </Alert>
       )}
-
 
       <Card>
         <CardHeader><CardTitle className="text-base">Histórico de Importações</CardTitle></CardHeader>
