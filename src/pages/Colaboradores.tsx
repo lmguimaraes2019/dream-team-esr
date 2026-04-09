@@ -257,7 +257,7 @@ export default function Colaboradores() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
-              <TableHead>Matrícula</TableHead>
+              <TableHead>Matrícula / Empresa</TableHead>
               <TableHead>Gerência</TableHead>
               <TableHead>Cargo</TableHead>
               <TableHead>Nível de Complexidade</TableHead>
@@ -272,7 +272,7 @@ export default function Colaboradores() {
                 onClick={() => navigate(`/colaboradores/${c.id}`)}
               >
                 <TableCell className="font-medium">{c.nome}</TableCell>
-                <TableCell>{c.matricula}</TableCell>
+                <TableCell>{c.tipo_vinculo === "terceirizado" ? (c as any).empresa_terceirizada || "—" : c.matricula || "—"}</TableCell>
                 <TableCell>{c.gerencia}</TableCell>
                 <TableCell>{c.cargo}</TableCell>
                 <TableCell>
