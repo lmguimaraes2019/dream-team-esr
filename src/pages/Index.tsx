@@ -229,7 +229,7 @@ export default function Index() {
               <CardHeader><CardTitle className="text-base">Salário Médio por Gênero</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={salarioGenero} margin={{ bottom: 50 }}>
+                  <BarChart data={salarioGenero} margin={{ bottom: 50 }} className="text-xs">
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="genero" tick={<GenderTick />} height={65} />
                     <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
@@ -247,7 +247,7 @@ export default function Index() {
               <CardHeader><CardTitle className="text-base">Salário por Gênero × Liderança</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={salarioGeneroLider}>
+                  <BarChart data={salarioGeneroLider} className="text-xs">
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="grupo" tick={{ fontSize: 11 }} />
                     <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
@@ -264,7 +264,7 @@ export default function Index() {
             <CardHeader><CardTitle className="text-base">Custo por Gerência</CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={custoGerencia} layout="vertical">
+                <BarChart data={custoGerencia} layout="vertical" className="text-xs">
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                   <YAxis dataKey="gerencia" type="category" width={120} tick={{ fontSize: 12 }} />
@@ -281,14 +281,14 @@ export default function Index() {
               <CardHeader><CardTitle className="text-base">Distribuição por Nível</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
+                  <PieChart className="text-xs">
                     <Pie data={distNivel} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
                       {distNivel.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip />
-                    <Legend />
+                    <Legend className="text-xs" />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -297,14 +297,14 @@ export default function Index() {
               <CardHeader><CardTitle className="text-base">Distribuição por Trajetória</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
+                  <PieChart className="text-xs">
                     <Pie data={distTrajetoria} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
                       {distTrajetoria.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip />
-                    <Legend />
+                    <Legend className="text-xs" />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
