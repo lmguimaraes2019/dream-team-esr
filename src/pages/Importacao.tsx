@@ -92,7 +92,7 @@ export default function Importacao() {
       let headerIdx = -1;
       for (let i = 0; i < Math.min(rawRows.length, 15); i++) {
         const vals = (rawRows[i] || []).map((v: any) => normalizeHeader(String(v || "")));
-        if (vals.includes("matricula") && vals.includes("nome")) {
+        if (vals.includes("nome") && (vals.includes("matricula") || vals.includes("cargo"))) {
           headerIdx = i;
           break;
         }
@@ -122,8 +122,8 @@ export default function Importacao() {
         warnings.push(`Colunas ignoradas: ${unmapped.join(", ")}`);
       }
 
-      if (!("matricula" in colMap) || !("nome" in colMap)) {
-        toast({ title: "Colunas obrigatórias ausentes", description: "Precisa de 'Matrícula' e 'Nome'.", variant: "destructive" });
+      if (!("nome" in colMap)) {
+        toast({ title: "Coluna obrigatória ausente", description: "Precisa de 'Nome'.", variant: "destructive" });
         return;
       }
 
@@ -133,7 +133,7 @@ export default function Importacao() {
       };
 
       const dataRows = rawRows.slice(headerIdx + 1).filter((row) =>
-        row && row.length > 0 && get(row, "matricula") && get(row, "nome")
+        row && row.length > 0 && get(row, "nome")
       );
 
       const rows: PreviewRow[] = dataRows.map((row) => {
@@ -201,8 +201,8 @@ export default function Importacao() {
       for (let i = 0; i < preview.length; i++) {
         const row = preview[i];
 
-        if (!row.nome || !row.matricula) {
-          errors.push({ row: i + 2, error: "Nome ou matrícula vazios" });
+        if (!row.nome) {
+          errors.push({ row: i + 2, error: "Nome vazio" });
           continue;
         }
 
