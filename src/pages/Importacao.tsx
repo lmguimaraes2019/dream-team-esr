@@ -451,6 +451,7 @@ export default function Importacao() {
                   <TableHead>Registros</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Data</TableHead>
+                  {isAdmin && <TableHead className="w-10"></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -465,6 +466,31 @@ export default function Importacao() {
                       </Badge>
                     </TableCell>
                     <TableCell>{new Date(h.created_at).toLocaleDateString("pt-BR")}</TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={async () => {
+                            if (!confirm(`Excluir importação "${h.nome_arquivo}" e os custos do mês ${h.mes_referencia}?`)) return;
+                            // Delete associated costs for this month
+                            await supabase.from("custos_mensais").delete().eq("mes_referencia", h.mes_referencia);
+                            // Delete the import record
+                            await supabase.from("importacoes").delete().eq("id", h.id);
+                            toast({ title: "Importação excluída" });
+                            const { data: hist } = await supabase
+                              .from("importacoes")
+                              .select("*")
+                              .order("created_at", { ascending: false })
+                              .limit(20);
+                            setHistorico(hist || []);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
