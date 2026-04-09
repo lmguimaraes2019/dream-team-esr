@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import TabelaSalarialImport from "@/components/TabelaSalarialImport";
 
 export default function Configuracoes() {
   const [encargos, setEncargos] = useState<any[]>([]);
@@ -160,6 +161,13 @@ export default function Configuracoes() {
               ))}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Tabela Salarial</CardTitle></CardHeader>
+        <CardContent>
+          <TabelaSalarialImport />
         </CardContent>
       </Card>
 
