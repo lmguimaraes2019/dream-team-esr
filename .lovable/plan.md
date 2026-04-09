@@ -1,72 +1,35 @@
 
-# Sistema de Gestão Gerencial de Equipe — MVP
 
-## Visão Geral
-Sistema web em PT-BR para gestão de colaboradores com foco em custos, estrutura de carreira e dashboards executivos. Interface com toggle light/dark, sidebar de navegação, e controle de acesso por perfil.
+# Correção: Dados não aparecem após importação
 
-## 1. Backend (Supabase/Lovable Cloud)
+## Diagnóstico
+A importação registrou 38 linhas como "concluído", mas as tabelas `colaboradores` e `custos_mensais` estão vazias (0 registros). Os upserts falharam silenciosamente porque o código faz `continue` sem logar erros.
 
-### Autenticação & Perfis
-- Login com email/senha via Supabase Auth
-- Tabela `user_roles` com enum (admin, gestor, leitura)
-- RLS em todas as tabelas baseado no perfil do usuário
+**Causa raiz**: os valores da planilha não correspondem aos enums do banco:
+- `genero`: aceita apenas `masculino`, `feminino`, `outro`
+- `nivel_complexidade`: apenas `junior`, `pleno`, `senior`, `especialista`, `master`
+- `tipo_vinculo`: apenas `clt`, `terceirizado`
 
-### Tabelas Principais
-- **colaboradores**: nome, matrícula, gênero, liderança (bool), data_admissão, gerência, diretoria, cargo, trajetória, nível_complexidade (enum: junior/pleno/senior/especialista/master), grupo (1/2), tipo_vínculo (CLT/terceirizado), ativo (bool)
-- **custos_mensais**: referência ao colaborador + mês de referência (YYYY-MM), salário_base, valores de cada encargo e benefício, provisões, totais calculados. Nunca sobrescreve — um registro por colaborador/mês
-- **configuracoes_encargos**: taxas configuráveis (INSS %, FGTS %, PIS %, etc.) com versionamento por data
-- **importacoes**: log de cada importação (arquivo, data, qtd registros, usuário)
+Se a planilha tiver "Sênior", "CLT", "Masculino" (com maiúscula ou acentos), o insert falha.
 
-### Cálculos
-- Tempo de casa = calculado dinamicamente (hoje - data_admissão)
-- Encargos = salário × taxa configurada
-- Provisões: férias (salário/12), 1/3 férias, 13º (salário/12)
-- Custo mensal = salário + encargos + benefícios + provisões
-- Custo anual = mensal × 12
+## Plano de Correção
 
-## 2. Interface & Páginas
+### 1. Melhorar normalização de enums no `Importacao.tsx`
+- Criar mapeamentos robustos que convertam variações comuns para os valores aceitos:
+  - Gênero: "M"/"Masculino"/"masc" → "masculino", "F"/"Feminino"/"fem" → "feminino"
+  - Nível: "Sênior"/"Sr"/"senior"/"sênior" → "senior", "Júnior"/"Jr" → "junior", "Pleno"/"Pl" → "pleno"
+  - Vínculo: "CLT"/"Clt" → "clt", "Terceirizado"/"terceiro"/"PJ" → "terceirizado"
 
-### Layout
-- Sidebar com navegação: Dashboard, Colaboradores, Importação, Configurações
-- Header com toggle dark/light theme e info do usuário
-- Design executivo limpo, responsivo
+### 2. Tratar datas do Excel
+- Detectar quando `data_admissao` é um número serial do Excel e converter para formato ISO (YYYY-MM-DD)
 
-### Dashboard (página principal)
-- **Cards resumo**: total colaboradores, custo total mensal, custo médio por colaborador
-- **Gráficos** (Recharts):
-  - Salário médio por gênero (barras)
-  - Salário por gênero × liderança (barras agrupadas)
-  - Custo por gerência (barras horizontais)
-  - Distribuição por nível de complexidade (pizza/donut)
-  - Distribuição por trajetória (pizza/donut)
-- Filtro por mês de referência
+### 3. Adicionar tratamento de erros visível
+- Em vez de `continue` silencioso, coletar os erros de cada linha e exibir um resumo ao final (ex: "35 de 38 importados, 3 com erro")
+- Logar qual linha e qual erro ocorreu
 
-### Lista de Colaboradores
-- Tabela com busca e filtros (gerência, nível, vínculo)
-- Colunas: nome, matrícula, gerência, cargo, nível, vínculo, custo mensal
-- Link para página individual
+### 4. Deletar a importação fantasma
+- Remover o registro de importação que mostra "38 registros concluído" mas não salvou nada, para manter o histórico correto
 
-### Página do Colaborador
-- Dados gerais e estrutura (nível, trajetória, grupo)
-- Breakdown detalhado de custos (salário, encargos, benefícios, provisões)
-- Tempo de casa calculado
-- Tipo de vínculo
+### Arquivos alterados
+- `src/pages/Importacao.tsx` — normalização de enums, tratamento de datas Excel, feedback de erros
 
-### Importação de Planilha
-- Upload de XLSX ou CSV
-- Preview dos dados em tabela antes de confirmar
-- Seleção do mês de referência
-- Botão de confirmação para salvar
-- Histórico de importações (nunca apaga dados anteriores)
-
-### Configurações (admin only)
-- Gerenciar taxas de encargos (INSS, FGTS, PIS)
-- Gerenciar usuários e perfis de acesso
-
-## 3. Controle de Acesso
-- **Admin**: acesso total (CRUD colaboradores, importação, configurações, dashboards)
-- **Gestor**: visualiza colaboradores da sua gerência + dashboards
-- **Leitura**: apenas dashboards (somente visualização)
-
-## 4. Escopo Excluído (V2+)
-PDI, 1:1, workflows, automações avançadas
