@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Constants } from "@/integrations/supabase/types";
 import { NIVEL_OPTIONS } from "@/lib/nivelLabels";
 import { Camera } from "lucide-react";
+import PhotoCropDialog from "@/components/PhotoCropDialog";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Colaborador = Tables<"colaboradores">;
@@ -28,16 +29,23 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>((colaborador as any).foto_url || null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleCroppedUpload = async (blob: Blob) => {
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `${colaborador.id}.${ext}`;
-    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    const path = `${colaborador.id}.jpg`;
+    const { error } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
     if (error) {
       toast({ title: "Erro no upload", description: error.message, variant: "destructive" });
     } else {
