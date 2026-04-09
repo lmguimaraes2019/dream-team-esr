@@ -17,6 +17,7 @@ import {
   excelDateToISO, nivelFromCargo, isLideranca,
   normalizeHeader, mapHeader,
 } from "@/lib/importNormalization";
+import { calcularCustos, buildParametros, type ParametrosCusto, type CustosCalculados } from "@/lib/calcularCustos";
 
 interface PreviewRow {
   nome: string;
@@ -31,20 +32,7 @@ interface PreviewRow {
   nivel_complexidade: string;
   grupo: number;
   tipo_vinculo: string;
-  salario_base: number;
-  inss: number;
-  fgts: number;
-  pis: number;
-  vr_va: number;
-  vt: number;
-  plano_saude: number;
-  seguro: number;
-  internet: number;
-  ferias: number;
-  um_terco_ferias: number;
-  decimo_terceiro: number;
-  custo_mensal: number;
-  custo_anual: number;
+  custos: CustosCalculados;
 }
 
 export default function Importacao() {
@@ -59,6 +47,7 @@ export default function Importacao() {
   const [importErrors, setImportErrors] = useState<{ row: number; error: string }[]>([]);
   const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null);
   const [parseWarnings, setParseWarnings] = useState<string[]>([]);
+  const [parametros, setParametros] = useState<ParametrosCusto | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
@@ -70,11 +59,25 @@ export default function Importacao() {
       .order("created_at", { ascending: false })
       .limit(20)
       .then(({ data }) => setHistorico(data || []));
+
+    // Load cost parameters
+    supabase
+      .from("configuracoes_encargos")
+      .select("*")
+      .then(({ data }) => {
+        if (data) {
+          setParametros(buildParametros(data as any));
+        }
+      });
   }, []);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!parametros) {
+      toast({ title: "Parâmetros não carregados", description: "Aguarde ou verifique as configurações.", variant: "destructive" });
+      return;
+    }
     setFileName(file.name);
     setParseWarnings([]);
 
@@ -84,10 +87,8 @@ export default function Importacao() {
       const wb = XLSX.read(data, { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
 
-      // Get raw 2D array to find the header row
       const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
-      // Find header row: look for a row containing "Matrícula" and "Nome"
       let headerIdx = -1;
       for (let i = 0; i < Math.min(rawRows.length, 15); i++) {
         const vals = (rawRows[i] || []).map((v: any) => normalizeHeader(String(v || "")));
@@ -102,7 +103,6 @@ export default function Importacao() {
         return;
       }
 
-      // Build column mapping
       const rawHeaders: string[] = rawRows[headerIdx].map((v: any) => String(v || ""));
       const colMap: Record<string, number> = {};
       const warnings: string[] = [];
@@ -122,7 +122,6 @@ export default function Importacao() {
         warnings.push(`Colunas ignoradas: ${unmapped.join(", ")}`);
       }
 
-      // Required columns check
       if (!("matricula" in colMap) || !("nome" in colMap)) {
         toast({ title: "Colunas obrigatórias ausentes", description: "Precisa de 'Matrícula' e 'Nome'.", variant: "destructive" });
         return;
@@ -143,39 +142,22 @@ export default function Importacao() {
         const cargo = String(get(row, "cargo") || "");
         const salario = Number(get(row, "salario_base") || 0);
 
-        // Use spreadsheet values if available, otherwise calculate
-        const inss = Number(get(row, "inss") || 0);
-        const fgts = Number(get(row, "fgts") || 0);
-        const pis = Number(get(row, "pis") || 0);
-        const vrVa = Number(get(row, "vr_va") || 0);
-        const vt = Number(get(row, "vt") || 0);
-        const planoSaude = Number(get(row, "plano_saude") || 0);
-        const seguro = Number(get(row, "seguro") || 0);
-        const internet = Number(get(row, "internet") || 0);
-        const ferias = Number(get(row, "ferias") || 0);
-        const umTercoFerias = Number(get(row, "um_terco_ferias") || 0);
-        const decimoTerceiro = Number(get(row, "decimo_terceiro") || 0);
-
-        const custoMensal = Number(get(row, "custo_mensal") || 0) ||
-          (salario + inss + fgts + pis + vrVa + vt + planoSaude + seguro + internet + ferias + umTercoFerias + decimoTerceiro);
-
-        // Determine nivel from column or infer from cargo
         const rawNivel = get(row, "nivel_complexidade");
         const nivel = rawNivel ? (normalizeNivel(String(rawNivel)) || nivelFromCargo(cargo)) : nivelFromCargo(cargo);
 
-        // Determine genero
         const rawGenero = get(row, "genero");
         const genero = rawGenero ? (normalizeGenero(String(rawGenero)) || "outro") : "outro";
 
-        // Determine vinculo
         const rawVinculo = get(row, "tipo_vinculo");
         const tipoVinculo = rawVinculo ? (normalizeVinculo(String(rawVinculo)) || "clt") : "clt";
 
-        // Determine lideranca
         const rawLideranca = get(row, "lideranca");
         const lideranca = rawLideranca
           ? ["sim", "true", "1", "s"].includes(String(rawLideranca).toLowerCase())
           : isLideranca(cargo);
+
+        // Calculate all costs from salary + parameters
+        const custos = calcularCustos(salario, parametros!);
 
         return {
           nome: String(get(row, "nome") || "").trim(),
@@ -190,15 +172,7 @@ export default function Importacao() {
           nivel_complexidade: nivel,
           grupo: Number(get(row, "grupo")) || 1,
           tipo_vinculo: tipoVinculo,
-          salario_base: salario,
-          inss, fgts, pis,
-          vr_va: vrVa, vt,
-          plano_saude: planoSaude,
-          seguro, internet,
-          ferias, um_terco_ferias: umTercoFerias,
-          decimo_terceiro: decimoTerceiro,
-          custo_mensal: Math.round(custoMensal * 100) / 100,
-          custo_anual: Math.round(custoMensal * 12 * 100) / 100,
+          custos,
         };
       });
 
@@ -259,24 +233,25 @@ export default function Importacao() {
           continue;
         }
 
+        const c = row.custos;
         const { error: custoErr } = await supabase.from("custos_mensais").upsert(
           {
             colaborador_id: colab.id,
             mes_referencia: mesRef,
-            salario_base: row.salario_base,
-            inss: Math.round(row.inss * 100) / 100,
-            fgts: Math.round(row.fgts * 100) / 100,
-            pis: Math.round(row.pis * 100) / 100,
-            vr_va: row.vr_va,
-            vt: row.vt,
-            plano_saude: row.plano_saude,
-            seguro: row.seguro,
-            internet: row.internet,
-            ferias: Math.round(row.ferias * 100) / 100,
-            um_terco_ferias: Math.round(row.um_terco_ferias * 100) / 100,
-            decimo_terceiro: Math.round(row.decimo_terceiro * 100) / 100,
-            custo_mensal: row.custo_mensal,
-            custo_anual: row.custo_anual,
+            salario_base: c.salario_base,
+            inss: c.inss,
+            fgts: c.fgts,
+            pis: c.pis,
+            vr_va: c.vr_va,
+            vt: c.vt,
+            plano_saude: c.plano_saude,
+            seguro: c.seguro,
+            internet: c.internet,
+            ferias: c.ferias,
+            um_terco_ferias: c.um_terco_ferias,
+            decimo_terceiro: c.decimo_terceiro,
+            custo_mensal: c.custo_mensal,
+            custo_anual: c.custo_anual,
           },
           { onConflict: "colaborador_id,mes_referencia" }
         );
@@ -404,10 +379,10 @@ export default function Importacao() {
                         <Badge variant="outline">{r.nivel_complexidade}</Badge>
                       </TableCell>
                       <TableCell>
-                        {r.salario_base.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        {r.custos.salario_base.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                       </TableCell>
                       <TableCell>
-                        {r.custo_mensal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        {r.custos.custo_mensal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -474,9 +449,7 @@ export default function Importacao() {
                           className="h-8 w-8 text-destructive hover:text-destructive"
                           onClick={async () => {
                             if (!confirm(`Excluir importação "${h.nome_arquivo}" e os custos do mês ${h.mes_referencia}?`)) return;
-                            // Delete associated costs for this month
                             await supabase.from("custos_mensais").delete().eq("mes_referencia", h.mes_referencia);
-                            // Delete the import record
                             await supabase.from("importacoes").delete().eq("id", h.id);
                             toast({ title: "Importação excluída" });
                             const { data: hist } = await supabase

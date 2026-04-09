@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,17 +8,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import type { Tables } from "@/integrations/supabase/types";
-
-type Encargo = Tables<"configuracoes_encargos">;
 
 export default function Configuracoes() {
-  const [encargos, setEncargos] = useState<Encargo[]>([]);
+  const [encargos, setEncargos] = useState<any[]>([]);
   const [nome, setNome] = useState("");
   const [taxa, setTaxa] = useState("");
+  const [tipo, setTipo] = useState("taxa");
   const [editId, setEditId] = useState<string | null>(null);
 
-  // User management
   const [users, setUsers] = useState<any[]>([]);
   const { toast } = useToast();
 
@@ -45,29 +41,43 @@ export default function Configuracoes() {
   }, []);
 
   const handleSaveEncargo = async () => {
-    const taxaNum = parseFloat(taxa) / 100;
-    if (!nome || isNaN(taxaNum)) return;
+    if (!nome) return;
+    // For "taxa" type, user enters percentage (e.g. 25.5 → stored as 0.255)
+    // For "valor" type, user enters the value directly (e.g. 1069.77)
+    let valorFinal: number;
+    if (tipo === "taxa") {
+      valorFinal = parseFloat(taxa) / 100;
+    } else {
+      valorFinal = parseFloat(taxa);
+    }
+    if (isNaN(valorFinal)) return;
 
     if (editId) {
       await supabase
         .from("configuracoes_encargos")
-        .update({ nome, taxa: taxaNum })
+        .update({ nome, taxa: valorFinal, tipo } as any)
         .eq("id", editId);
     } else {
-      await supabase.from("configuracoes_encargos").insert({ nome, taxa: taxaNum });
+      await supabase.from("configuracoes_encargos").insert({ nome, taxa: valorFinal, tipo } as any);
     }
 
     setNome("");
     setTaxa("");
+    setTipo("taxa");
     setEditId(null);
     loadEncargos();
-    toast({ title: "Encargo salvo!" });
+    toast({ title: "Parâmetro salvo!" });
   };
 
-  const handleEditEncargo = (e: Encargo) => {
+  const handleEdit = (e: any) => {
     setEditId(e.id);
     setNome(e.nome);
-    setTaxa(String(Number(e.taxa) * 100));
+    setTipo(e.tipo || "taxa");
+    if (e.tipo === "valor") {
+      setTaxa(String(Number(e.taxa)));
+    } else {
+      setTaxa(String(Number(e.taxa) * 100));
+    }
   };
 
   const handleChangeRole = async (userId: string, newRole: string) => {
@@ -84,22 +94,38 @@ export default function Configuracoes() {
     }
   };
 
+  const formatDisplay = (e: any) => {
+    if (e.tipo === "valor") {
+      return Number(e.taxa).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+    return `${(Number(e.taxa) * 100).toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}%`;
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Configurações</h1>
 
-      {/* Encargos */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Taxas de Encargos</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Custos mensais, encargos e benefícios</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-3 items-end">
-            <div className="space-y-2 flex-1">
+          <div className="flex gap-3 items-end flex-wrap">
+            <div className="space-y-2 flex-1 min-w-[140px]">
               <Label>Nome</Label>
-              <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: INSS Patronal" />
+              <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: INSS" />
+            </div>
+            <div className="space-y-2 w-28">
+              <Label>Tipo</Label>
+              <Select value={tipo} onValueChange={setTipo}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="taxa">Taxa (%)</SelectItem>
+                  <SelectItem value="valor">Valor (R$)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2 w-32">
-              <Label>Taxa (%)</Label>
-              <Input type="number" step="0.01" value={taxa} onChange={(e) => setTaxa(e.target.value)} placeholder="20" />
+              <Label>{tipo === "taxa" ? "Taxa (%)" : "Valor (R$)"}</Label>
+              <Input type="number" step="0.01" value={taxa} onChange={(e) => setTaxa(e.target.value)} placeholder={tipo === "taxa" ? "25.5" : "1069.77"} />
             </div>
             <Button onClick={handleSaveEncargo}>
               {editId ? "Atualizar" : "Adicionar"}
@@ -109,8 +135,9 @@ export default function Configuracoes() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Taxa</TableHead>
+                <TableHead>Parâmetro</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Valor</TableHead>
                 <TableHead>Vigência</TableHead>
                 <TableHead></TableHead>
               </TableRow>
@@ -119,10 +146,13 @@ export default function Configuracoes() {
               {encargos.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell>{e.nome}</TableCell>
-                  <TableCell>{(Number(e.taxa) * 100).toFixed(2)}%</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{e.tipo === "valor" ? "Fixo" : "Taxa"}</Badge>
+                  </TableCell>
+                  <TableCell>{formatDisplay(e)}</TableCell>
                   <TableCell>{new Date(e.data_vigencia).toLocaleDateString("pt-BR")}</TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => handleEditEncargo(e)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(e)}>
                       Editar
                     </Button>
                   </TableCell>
@@ -133,7 +163,6 @@ export default function Configuracoes() {
         </CardContent>
       </Card>
 
-      {/* Users */}
       <Card>
         <CardHeader><CardTitle className="text-base">Usuários e Perfis</CardTitle></CardHeader>
         <CardContent>
