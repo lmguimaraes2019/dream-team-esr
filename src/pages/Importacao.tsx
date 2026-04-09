@@ -81,19 +81,22 @@ export default function Importacao() {
         const norm: Record<string, any> = {};
         Object.entries(row).forEach(([k, v]) => { norm[normalizeHeader(k)] = v; });
 
+        const rawDate = norm.data_admissao || norm.data_de_admissao || "";
+        const parsedDate = excelDateToISO(rawDate);
+
         return {
           nome: String(norm.nome || ""),
           matricula: String(norm.matricula || ""),
-          genero: (norm.genero || "outro").toLowerCase(),
+          genero: normalizeGenero(String(norm.genero || "outro")) || "outro",
           lideranca: ["sim", "true", "1", "s"].includes(String(norm.lideranca || "").toLowerCase()),
-          data_admissao: norm.data_admissao || norm.data_de_admissao || "",
+          data_admissao: parsedDate || String(rawDate),
           gerencia: String(norm.gerencia || ""),
           diretoria: String(norm.diretoria || ""),
           cargo: String(norm.cargo || ""),
           trajetoria: String(norm.trajetoria || ""),
-          nivel_complexidade: (norm.nivel_complexidade || norm.nivel || "junior").toLowerCase(),
+          nivel_complexidade: normalizeNivel(String(norm.nivel_complexidade || norm.nivel || "junior")) || "junior",
           grupo: Number(norm.grupo) || 1,
-          tipo_vinculo: (norm.tipo_vinculo || norm.vinculo || "clt").toLowerCase(),
+          tipo_vinculo: normalizeVinculo(String(norm.tipo_vinculo || norm.vinculo || "clt")) || "clt",
           salario_base: Number(norm.salario_base || norm.salario || 0),
           vr_va: Number(norm.vr_va || norm.vr || norm.va || 0),
           vt: Number(norm.vt || 0),
@@ -104,6 +107,8 @@ export default function Importacao() {
       });
 
       setPreview(rows);
+      setImportErrors([]);
+      setImportResult(null);
     };
     reader.readAsArrayBuffer(file);
   };
