@@ -43,6 +43,8 @@ export default function ColaboradorDetalhe() {
 
   if (!colab) return <div className="p-8 text-muted-foreground">Carregando...</div>;
 
+  const isTerceirizado = colab.tipo_vinculo === "terceirizado";
+
   const now = new Date();
   const admissao = parseISO(colab.data_admissao);
   const anos = differenceInYears(now, admissao);
@@ -94,36 +96,55 @@ export default function ColaboradorDetalhe() {
         <Card>
           <CardHeader><CardTitle className="text-base">Dados Gerais</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Row label="Matrícula" value={colab.matricula} />
+            {!isTerceirizado && <Row label="Matrícula" value={colab.matricula || "—"} />}
             <Row label="Gênero" value={colab.genero.charAt(0).toUpperCase() + colab.genero.slice(1)} />
             <Row label="Liderança" value={colab.lideranca ? "Sim" : "Não"} />
             <Row label="Data de Admissão" value={new Date(colab.data_admissao).toLocaleDateString("pt-BR")} />
             <Row label="Tempo de Casa" value={tempoCasa} />
             <Row label="Gerência" value={colab.gerencia} />
             <Row label="Diretoria" value={colab.diretoria} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle className="text-base">Estrutura de Carreira</CardTitle></CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <Row label="Cargo" value={colab.cargo} />
-            <Row label="Trajetória" value={colab.trajetoria} />
-            <Row label="Nível de Complexidade" value={nivelLabel(colab.nivel_complexidade)} />
-            <Row label="Grupo" value={String(colab.grupo)} />
-            {custo && (
-              <SalaryRangeRuler
-                trajetoria={colab.trajetoria}
-                nivel_complexidade={colab.nivel_complexidade}
-                grupo={colab.grupo}
-                salario={custo.salario_base}
-              />
+            {!isTerceirizado && (colab as any).origem_recurso && (
+              <Row label="Origem de Recurso" value={(colab as any).origem_recurso} />
             )}
           </CardContent>
         </Card>
+
+        {isTerceirizado ? (
+          <Card>
+            <CardHeader><CardTitle className="text-base">Dados do Contrato</CardTitle></CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <Row label="Empresa" value={(colab as any).empresa_terceirizada || "—"} />
+              <Row label="Custo Mensal" value={(colab as any).custo_mensal_terceirizado ? fmt((colab as any).custo_mensal_terceirizado) : "—"} />
+              <Row label="Duração do Contrato" value={(colab as any).duracao_contrato || "—"} />
+              <Row label="Gestor do Contrato" value={(colab as any).gestor_contrato || "—"} />
+              <Row label="Cargo" value={colab.cargo} />
+              <Row label="Trajetória" value={colab.trajetoria} />
+              <Row label="Nível de Complexidade" value={nivelLabel(colab.nivel_complexidade)} />
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader><CardTitle className="text-base">Estrutura de Carreira</CardTitle></CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <Row label="Cargo" value={colab.cargo} />
+              <Row label="Trajetória" value={colab.trajetoria} />
+              <Row label="Nível de Complexidade" value={nivelLabel(colab.nivel_complexidade)} />
+              <Row label="Grupo" value={String(colab.grupo)} />
+              {custo && (
+                <SalaryRangeRuler
+                  trajetoria={colab.trajetoria}
+                  nivel_complexidade={colab.nivel_complexidade}
+                  grupo={colab.grupo}
+                  salario={custo.salario_base}
+                />
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      {custo ? (
+      {/* Custos detalhados — only for CLT */}
+      {!isTerceirizado && custo ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
@@ -165,10 +186,29 @@ export default function ColaboradorDetalhe() {
             </div>
           </CardContent>
         </Card>
-      ) : (
+      ) : !isTerceirizado ? (
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
             Nenhum custo registrado para este colaborador.
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {/* Terceirizado cost summary */}
+      {isTerceirizado && (colab as any).custo_mensal_terceirizado && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Resumo de Custos</CardTitle></CardHeader>
+          <CardContent>
+            <div className="flex gap-6">
+              <div>
+                <p className="text-sm text-muted-foreground">Custo Mensal</p>
+                <p className="text-xl font-bold text-primary">{fmt((colab as any).custo_mensal_terceirizado)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Custo Anual</p>
+                <p className="text-xl font-bold">{fmt((colab as any).custo_mensal_terceirizado * 12)}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -194,7 +234,7 @@ function CustoSection({ title, children }: { title: string; children: React.Reac
   );
 }
 
-function CustoItem({ label, value }: { label: number; value: number } | { label: string; value: number }) {
+function CustoItem({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex justify-between text-sm">
       <span className="text-muted-foreground">{label}</span>

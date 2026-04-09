@@ -33,6 +33,8 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
   const fileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  const isTerceirizado = form.tipo_vinculo === "terceirizado";
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -60,24 +62,36 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    const updateData: any = {
+      nome: form.nome,
+      genero: form.genero,
+      lideranca: form.lideranca,
+      data_admissao: form.data_admissao,
+      gerencia: form.gerencia,
+      diretoria: form.diretoria,
+      cargo: form.cargo,
+      trajetoria: form.trajetoria,
+      nivel_complexidade: form.nivel_complexidade,
+      grupo: form.grupo,
+      tipo_vinculo: form.tipo_vinculo,
+      ativo: form.ativo,
+      foto_url: (form as any).foto_url,
+    };
+
+    if (isTerceirizado) {
+      updateData.empresa_terceirizada = (form as any).empresa_terceirizada || null;
+      updateData.custo_mensal_terceirizado = (form as any).custo_mensal_terceirizado || null;
+      updateData.duracao_contrato = (form as any).duracao_contrato || null;
+      updateData.gestor_contrato = (form as any).gestor_contrato || null;
+      updateData.matricula = (form as any).matricula || null;
+    } else {
+      updateData.matricula = form.matricula;
+      updateData.origem_recurso = (form as any).origem_recurso || null;
+    }
+
     const { error } = await supabase
       .from("colaboradores")
-      .update({
-        nome: form.nome,
-        matricula: form.matricula,
-        genero: form.genero,
-        lideranca: form.lideranca,
-        data_admissao: form.data_admissao,
-        gerencia: form.gerencia,
-        diretoria: form.diretoria,
-        cargo: form.cargo,
-        trajetoria: form.trajetoria,
-        nivel_complexidade: form.nivel_complexidade,
-        grupo: form.grupo,
-        tipo_vinculo: form.tipo_vinculo,
-        ativo: form.ativo,
-        foto_url: (form as any).foto_url,
-      } as any)
+      .update(updateData)
       .eq("id", colaborador.id);
 
     setSaving(false);
@@ -136,9 +150,53 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
             <Input required value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
           </div>
           <div className="space-y-2">
-            <Label>Matrícula *</Label>
-            <Input required value={form.matricula} onChange={(e) => setForm({ ...form, matricula: e.target.value })} />
+            <Label>Tipo de Vínculo</Label>
+            <Select value={form.tipo_vinculo} onValueChange={(v: any) => setForm({ ...form, tipo_vinculo: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Constants.public.Enums.tipo_vinculo.map((t) => (
+                  <SelectItem key={t} value={t}>{t.toUpperCase()}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
+          {/* CLT-specific fields */}
+          {!isTerceirizado && (
+            <>
+              <div className="space-y-2">
+                <Label>Matrícula *</Label>
+                <Input required value={form.matricula || ""} onChange={(e) => setForm({ ...form, matricula: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Origem de Recurso</Label>
+                <Input value={(form as any).origem_recurso || ""} onChange={(e) => setForm({ ...form, origem_recurso: e.target.value } as any)} />
+              </div>
+            </>
+          )}
+
+          {/* Terceirizado-specific fields */}
+          {isTerceirizado && (
+            <>
+              <div className="space-y-2">
+                <Label>Empresa Terceirizada *</Label>
+                <Input required value={(form as any).empresa_terceirizada || ""} onChange={(e) => setForm({ ...form, empresa_terceirizada: e.target.value } as any)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Custo Mensal (R$)</Label>
+                <Input type="number" step="0.01" value={(form as any).custo_mensal_terceirizado || ""} onChange={(e) => setForm({ ...form, custo_mensal_terceirizado: Number(e.target.value) } as any)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Duração do Contrato</Label>
+                <Input placeholder="Ex: 12 meses" value={(form as any).duracao_contrato || ""} onChange={(e) => setForm({ ...form, duracao_contrato: e.target.value } as any)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Gestor do Contrato</Label>
+                <Input value={(form as any).gestor_contrato || ""} onChange={(e) => setForm({ ...form, gestor_contrato: e.target.value } as any)} />
+              </div>
+            </>
+          )}
+
           <div className="space-y-2">
             <Label>Gênero</Label>
             <Select value={form.genero} onValueChange={(v: any) => setForm({ ...form, genero: v })}>
@@ -195,17 +253,6 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
               <SelectContent>
                 <SelectItem value="1">1</SelectItem>
                 <SelectItem value="2">2</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Tipo de Vínculo</Label>
-            <Select value={form.tipo_vinculo} onValueChange={(v: any) => setForm({ ...form, tipo_vinculo: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Constants.public.Enums.tipo_vinculo.map((t) => (
-                  <SelectItem key={t} value={t}>{t.toUpperCase()}</SelectItem>
-                ))}
               </SelectContent>
             </Select>
           </div>
