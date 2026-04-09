@@ -281,7 +281,7 @@ export default function Index() {
               <CardHeader><CardTitle className="text-base">Distribuição por Nível</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
+                  <PieChart className="text-xs">
                     <Pie data={distNivel} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
                       {distNivel.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -297,7 +297,7 @@ export default function Index() {
               <CardHeader><CardTitle className="text-base">Distribuição por Trajetória</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
+                  <PieChart className="text-xs">
                     <Pie data={distTrajetoria} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
                       {distTrajetoria.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
