@@ -50,6 +50,8 @@ export default function Importacao() {
   });
   const [saving, setSaving] = useState(false);
   const [historico, setHistorico] = useState<Tables<"importacoes">[]>([]);
+  const [importErrors, setImportErrors] = useState<{ row: number; error: string }[]>([]);
+  const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
