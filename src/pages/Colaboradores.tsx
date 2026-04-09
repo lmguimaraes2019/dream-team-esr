@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Constants } from "@/integrations/supabase/types";
 import { NIVEL_OPTIONS, nivelLabel } from "@/lib/nivelLabels";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
+import { useOrigensRecurso } from "@/hooks/useOrigensRecurso";
 
 type Colaborador = Tables<"colaboradores">;
 
@@ -27,6 +28,7 @@ export default function Colaboradores() {
   const { isAdmin } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const origensRecurso = useOrigensRecurso();
 
   const load = async () => {
     const { data } = await supabase.from("colaboradores").select("*").eq("ativo", true).order("nome");
@@ -107,7 +109,14 @@ export default function Colaboradores() {
                     </div>
                     <div className="space-y-2">
                       <Label>Origem de Recurso</Label>
-                      <Input value={form.origem_recurso || ""} onChange={(e) => setForm({ ...form, origem_recurso: e.target.value })} />
+                      <Select value={form.origem_recurso || ""} onValueChange={(v) => setForm({ ...form, origem_recurso: v })}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          {origensRecurso.map((o) => (
+                            <SelectItem key={o} value={o}>{o}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </>
                 )}
