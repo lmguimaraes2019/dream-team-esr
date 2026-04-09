@@ -1,17 +1,20 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Pencil } from "lucide-react";
-import { differenceInYears, differenceInMonths, parseISO } from "date-fns";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { differenceInYears, differenceInMonths, parseISO, isWithinInterval } from "date-fns";
 import { nivelLabel } from "@/lib/nivelLabels";
 import type { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import ColaboradorEditDialog from "@/components/ColaboradorEditDialog";
 import SalaryRangeRuler from "@/components/SalaryRangeRuler";
+import AusenciasManager, { AusenciaBadge } from "@/components/AusenciasManager";
+import { useToast } from "@/hooks/use-toast";
 
 type Colaborador = Tables<"colaboradores">;
 type CustoMensal = Tables<"custos_mensais">;
@@ -24,7 +27,10 @@ export default function ColaboradorDetalhe() {
   const [colab, setColab] = useState<Colaborador | null>(null);
   const [custo, setCusto] = useState<CustoMensal | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [ausenciaAtiva, setAusenciaAtiva] = useState<{ tipo: string } | null>(null);
   const { isAdmin } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   const loadData = () => {
     if (!id) return;
@@ -37,9 +43,31 @@ export default function ColaboradorDetalhe() {
       .limit(1)
       .maybeSingle()
       .then(({ data }) => setCusto(data));
+    // Check active absence
+    const today = new Date().toISOString().split("T")[0];
+    supabase
+      .from("ausencias")
+      .select("tipo")
+      .eq("colaborador_id", id)
+      .lte("data_inicio", today)
+      .gte("data_fim", today)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setAusenciaAtiva(data as any));
   };
 
   useEffect(() => { loadData(); }, [id]);
+
+  const handleDelete = async () => {
+    if (!id) return;
+    const { error } = await supabase.from("colaboradores").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Colaborador excluído!" });
+      navigate("/colaboradores");
+    }
+  };
 
   if (!colab) return <div className="p-8 text-muted-foreground">Carregando...</div>;
 
@@ -71,15 +99,39 @@ export default function ColaboradorDetalhe() {
           <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
         </Avatar>
         <div>
-          <h1 className="text-3xl font-bold">{colab.nome}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold">{colab.nome}</h1>
+            {ausenciaAtiva && <AusenciaBadge tipo={ausenciaAtiva.tipo} />}
+          </div>
           <Badge variant={colab.tipo_vinculo === "clt" ? "default" : "outline"} className="mt-1">
             {colab.tipo_vinculo.toUpperCase()}
           </Badge>
         </div>
         {isAdmin && (
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} className="ml-auto">
-            <Pencil className="mr-2 h-4 w-4" />Editar
-          </Button>
+          <div className="ml-auto flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <Pencil className="mr-2 h-4 w-4" />Editar
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="mr-2 h-4 w-4" />Excluir
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir colaborador?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação é irreversível. Todos os dados de custos e ausências deste colaborador serão removidos.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         )}
       </div>
 
@@ -142,6 +194,9 @@ export default function ColaboradorDetalhe() {
           </Card>
         )}
       </div>
+
+      {/* Ausências */}
+      <AusenciasManager colaboradorId={colab.id} isAdmin={isAdmin} />
 
       {/* Custos detalhados — only for CLT */}
       {!isTerceirizado && custo ? (
