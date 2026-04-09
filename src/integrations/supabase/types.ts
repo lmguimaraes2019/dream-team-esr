@@ -14,16 +14,262 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      colaboradores: {
+        Row: {
+          ativo: boolean
+          cargo: string
+          created_at: string
+          data_admissao: string
+          diretoria: string
+          genero: Database["public"]["Enums"]["genero"]
+          gerencia: string
+          grupo: number
+          id: string
+          lideranca: boolean
+          matricula: string
+          nivel_complexidade: Database["public"]["Enums"]["nivel_complexidade"]
+          nome: string
+          tipo_vinculo: Database["public"]["Enums"]["tipo_vinculo"]
+          trajetoria: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cargo: string
+          created_at?: string
+          data_admissao: string
+          diretoria: string
+          genero: Database["public"]["Enums"]["genero"]
+          gerencia: string
+          grupo: number
+          id?: string
+          lideranca?: boolean
+          matricula: string
+          nivel_complexidade: Database["public"]["Enums"]["nivel_complexidade"]
+          nome: string
+          tipo_vinculo: Database["public"]["Enums"]["tipo_vinculo"]
+          trajetoria: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cargo?: string
+          created_at?: string
+          data_admissao?: string
+          diretoria?: string
+          genero?: Database["public"]["Enums"]["genero"]
+          gerencia?: string
+          grupo?: number
+          id?: string
+          lideranca?: boolean
+          matricula?: string
+          nivel_complexidade?: Database["public"]["Enums"]["nivel_complexidade"]
+          nome?: string
+          tipo_vinculo?: Database["public"]["Enums"]["tipo_vinculo"]
+          trajetoria?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      configuracoes_encargos: {
+        Row: {
+          created_at: string
+          data_vigencia: string
+          id: string
+          nome: string
+          taxa: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_vigencia?: string
+          id?: string
+          nome: string
+          taxa: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_vigencia?: string
+          id?: string
+          nome?: string
+          taxa?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      custos_mensais: {
+        Row: {
+          colaborador_id: string
+          created_at: string
+          custo_anual: number
+          custo_mensal: number
+          decimo_terceiro: number
+          ferias: number
+          fgts: number
+          id: string
+          inss: number
+          internet: number
+          mes_referencia: string
+          pis: number
+          plano_saude: number
+          salario_base: number
+          seguro: number
+          um_terco_ferias: number
+          vr_va: number
+          vt: number
+        }
+        Insert: {
+          colaborador_id: string
+          created_at?: string
+          custo_anual?: number
+          custo_mensal?: number
+          decimo_terceiro?: number
+          ferias?: number
+          fgts?: number
+          id?: string
+          inss?: number
+          internet?: number
+          mes_referencia: string
+          pis?: number
+          plano_saude?: number
+          salario_base?: number
+          seguro?: number
+          um_terco_ferias?: number
+          vr_va?: number
+          vt?: number
+        }
+        Update: {
+          colaborador_id?: string
+          created_at?: string
+          custo_anual?: number
+          custo_mensal?: number
+          decimo_terceiro?: number
+          ferias?: number
+          fgts?: number
+          id?: string
+          inss?: number
+          internet?: number
+          mes_referencia?: string
+          pis?: number
+          plano_saude?: number
+          salario_base?: number
+          seguro?: number
+          um_terco_ferias?: number
+          vr_va?: number
+          vt?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custos_mensais_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      importacoes: {
+        Row: {
+          created_at: string
+          id: string
+          mes_referencia: string
+          nome_arquivo: string
+          qtd_registros: number
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mes_referencia: string
+          nome_arquivo: string
+          qtd_registros?: number
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mes_referencia?: string
+          nome_arquivo?: string
+          qtd_registros?: number
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "gestor" | "leitura"
+      genero: "masculino" | "feminino" | "outro"
+      nivel_complexidade:
+        | "junior"
+        | "pleno"
+        | "senior"
+        | "especialista"
+        | "master"
+      tipo_vinculo: "clt" | "terceirizado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +396,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "gestor", "leitura"],
+      genero: ["masculino", "feminino", "outro"],
+      nivel_complexidade: [
+        "junior",
+        "pleno",
+        "senior",
+        "especialista",
+        "master",
+      ],
+      tipo_vinculo: ["clt", "terceirizado"],
+    },
   },
 } as const
