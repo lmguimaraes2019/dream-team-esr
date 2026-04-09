@@ -324,7 +324,27 @@ export default function Importacao() {
         </Card>
       )}
 
-      {/* History */}
+      {/* Import Result / Errors */}
+      {importResult && (
+        <Alert variant={importResult.failed > 0 ? "destructive" : "default"}>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>{importResult.success}</strong> de {importResult.success + importResult.failed} registros importados com sucesso.
+            {importResult.failed > 0 && (
+              <details className="mt-2">
+                <summary className="cursor-pointer text-sm">Ver {importResult.failed} erro(s)</summary>
+                <ul className="mt-1 text-xs space-y-1">
+                  {importErrors.map((e, i) => (
+                    <li key={i}>Linha {e.row}: {e.error}</li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
+
       <Card>
         <CardHeader><CardTitle className="text-base">Histórico de Importações</CardTitle></CardHeader>
         <CardContent>
