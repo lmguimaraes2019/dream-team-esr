@@ -4,28 +4,37 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, DollarSign, TrendingUp } from "lucide-react";
 import { nivelLabel } from "@/lib/nivelLabels";
+import { MaleIcon, FemaleIcon, OtherIcon } from "@/components/GenderIcons";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   PieChart, Pie, Cell, ResponsiveContainer,
 } from "recharts";
+import ReactDOM from "react-dom/client";
 
 const COLORS = [
   "hsl(221, 83%, 53%)", "hsl(160, 60%, 45%)", "hsl(30, 80%, 55%)",
   "hsl(280, 65%, 60%)", "hsl(340, 75%, 55%)",
 ];
 
-const GENDER_ICONS: Record<string, string> = {
-  Masculino: "♂",
-  Feminino: "♀",
-  Outro: "⚧",
+const GENDER_COLORS: Record<string, string> = {
+  Masculino: "#2196F3",
+  Feminino: "#E91E63",
+  Outro: "#9C27B0",
 };
 
 const GenderTick = ({ x, y, payload }: any) => {
-  const icon = GENDER_ICONS[payload.value] || "";
+  const gender = payload.value;
+  const iconSize = 32;
   return (
     <g transform={`translate(${x},${y})`}>
-      <text x={0} y={0} dy={14} textAnchor="middle" fontSize={20}>{icon}</text>
-      <text x={0} y={0} dy={32} textAnchor="middle" fontSize={11} fill="hsl(var(--muted-foreground))">{payload.value}</text>
+      <foreignObject x={-iconSize / 2} y={4} width={iconSize} height={iconSize + 4}>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          {gender === "Masculino" && <MaleIcon size={iconSize} />}
+          {gender === "Feminino" && <FemaleIcon size={iconSize} />}
+          {gender === "Outro" && <OtherIcon size={iconSize} />}
+        </div>
+      </foreignObject>
+      <text x={0} y={iconSize + 18} textAnchor="middle" fontSize={11} fill="hsl(var(--muted-foreground))">{gender}</text>
     </g>
   );
 };

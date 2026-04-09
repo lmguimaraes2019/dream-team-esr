@@ -63,9 +63,9 @@ export default function ColaboradorDetalhe() {
         <Button variant="ghost" size="icon" asChild>
           <Link to="/colaboradores"><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
-        <Avatar className="h-14 w-14">
-          {fotoUrl ? <AvatarImage src={fotoUrl} alt={colab.nome} /> : null}
-          <AvatarFallback className="text-lg">{initials}</AvatarFallback>
+        <Avatar className="h-20 w-20">
+          {fotoUrl ? <AvatarImage src={fotoUrl} alt={colab.nome} className="object-cover" /> : null}
+          <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
         </Avatar>
         <div>
           <h1 className="text-3xl font-bold">{colab.nome}</h1>
