@@ -3,6 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, DollarSign, TrendingUp } from "lucide-react";
+import { Link } from "react-router-dom";
+import { format, parseISO } from "date-fns";
+import { AusenciaBadge } from "@/components/AusenciasManager";
 import { nivelLabel } from "@/lib/nivelLabels";
 import { MaleIcon, FemaleIcon, OtherIcon } from "@/components/GenderIcons";
 import {
