@@ -232,6 +232,39 @@ export type Database = {
         }
         Relationships: []
       }
+      tabela_salarial: {
+        Row: {
+          created_at: string
+          faixa_fim: number
+          faixa_inicio: number
+          grupo: number
+          id: string
+          nivel_complexidade: string
+          trajetoria: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          faixa_fim: number
+          faixa_inicio: number
+          grupo?: number
+          id?: string
+          nivel_complexidade: string
+          trajetoria: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          faixa_fim?: number
+          faixa_inicio?: number
+          grupo?: number
+          id?: string
+          nivel_complexidade?: string
+          trajetoria?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

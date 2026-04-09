@@ -11,6 +11,7 @@ import { nivelLabel } from "@/lib/nivelLabels";
 import type { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import ColaboradorEditDialog from "@/components/ColaboradorEditDialog";
+import SalaryRangeRuler from "@/components/SalaryRangeRuler";
 
 type Colaborador = Tables<"colaboradores">;
 type CustoMensal = Tables<"custos_mensais">;
@@ -110,6 +111,14 @@ export default function ColaboradorDetalhe() {
             <Row label="Trajetória" value={colab.trajetoria} />
             <Row label="Nível de Complexidade" value={nivelLabel(colab.nivel_complexidade)} />
             <Row label="Grupo" value={String(colab.grupo)} />
+            {custo && (
+              <SalaryRangeRuler
+                trajetoria={colab.trajetoria}
+                nivel_complexidade={colab.nivel_complexidade}
+                grupo={colab.grupo}
+                salario={custo.salario_base}
+              />
+            )}
           </CardContent>
         </Card>
       </div>
