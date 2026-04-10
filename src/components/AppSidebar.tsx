@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Upload, Settings, CalendarDays, MessageSquarePlus } from "lucide-react";
+import { LayoutDashboard, Users, Settings, CalendarDays, MessageSquarePlus } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,7 +23,7 @@ export function AppSidebar() {
   const items = [
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
     { title: "Colaboradores", url: "/colaboradores", icon: Users },
-    { title: "Importação", url: "/importacao", icon: Upload },
+    
     { title: "Férias e Licenças", url: "/ferias-licencas", icon: CalendarDays },
     { title: "Feedback e 1:1", url: "/feedback-1on1", icon: MessageSquarePlus },
   ];

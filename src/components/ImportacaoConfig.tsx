@@ -36,7 +36,7 @@ interface PreviewRow {
   custos: CustosCalculados;
 }
 
-export default function Importacao() {
+export default function ImportacaoConfig() {
   const [preview, setPreview] = useState<PreviewRow[]>([]);
   const [fileName, setFileName] = useState("");
   const [mesRef, setMesRef] = useState(() => {
@@ -61,7 +61,6 @@ export default function Importacao() {
       .limit(20)
       .then(({ data }) => setHistorico(data || []));
 
-    // Load cost parameters
     supabase
       .from("configuracoes_encargos")
       .select("*")
@@ -157,7 +156,6 @@ export default function Importacao() {
           ? ["sim", "true", "1", "s"].includes(String(rawLideranca).toLowerCase())
           : isLideranca(cargo);
 
-        // Calculate all costs from salary + parameters
         const custos = calcularCustos(salario, parametros!);
 
         return {
@@ -209,19 +207,19 @@ export default function Importacao() {
         }
 
         const colabData: any = {
-              nome: row.nome,
-              matricula: row.matricula || null,
-              genero: row.genero as any,
-              lideranca: row.lideranca,
-              data_admissao: row.data_admissao,
-              gerencia: row.gerencia,
-              diretoria: row.diretoria,
-              cargo: row.cargo,
-              trajetoria: row.trajetoria,
-              nivel_complexidade: row.nivel_complexidade as any,
-              grupo: row.grupo,
-              tipo_vinculo: row.tipo_vinculo as any,
-              origem_recurso: row.origem_recurso || null,
+          nome: row.nome,
+          matricula: row.matricula || null,
+          genero: row.genero as any,
+          lideranca: row.lideranca,
+          data_admissao: row.data_admissao,
+          gerencia: row.gerencia,
+          diretoria: row.diretoria,
+          cargo: row.cargo,
+          trajetoria: row.trajetoria,
+          nivel_complexidade: row.nivel_complexidade as any,
+          grupo: row.grupo,
+          tipo_vinculo: row.tipo_vinculo as any,
+          origem_recurso: row.origem_recurso || null,
         };
 
         const upsertOpts = row.matricula ? { onConflict: "matricula" } : {};
@@ -299,9 +297,7 @@ export default function Importacao() {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Importação de Planilha</h1>
-
+    <div className="space-y-4">
       {isAdmin ? (
         <Card>
           <CardHeader><CardTitle className="text-base">Upload de Arquivo</CardTitle></CardHeader>
