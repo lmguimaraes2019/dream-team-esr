@@ -246,6 +246,100 @@ export type Database = {
           },
         ]
       }
+      desenvolvimento_acoes: {
+        Row: {
+          colaborador_id: string
+          created_at: string
+          descricao: string
+          evidencia: string | null
+          id: string
+          origem_id: string | null
+          origem_tipo: Database["public"]["Enums"]["origem_acao"] | null
+          prazo: string | null
+          status: Database["public"]["Enums"]["status_acao_dev"]
+          tipo: Database["public"]["Enums"]["tipo_acao_dev"]
+        }
+        Insert: {
+          colaborador_id: string
+          created_at?: string
+          descricao: string
+          evidencia?: string | null
+          id?: string
+          origem_id?: string | null
+          origem_tipo?: Database["public"]["Enums"]["origem_acao"] | null
+          prazo?: string | null
+          status?: Database["public"]["Enums"]["status_acao_dev"]
+          tipo?: Database["public"]["Enums"]["tipo_acao_dev"]
+        }
+        Update: {
+          colaborador_id?: string
+          created_at?: string
+          descricao?: string
+          evidencia?: string | null
+          id?: string
+          origem_id?: string | null
+          origem_tipo?: Database["public"]["Enums"]["origem_acao"] | null
+          prazo?: string | null
+          status?: Database["public"]["Enums"]["status_acao_dev"]
+          tipo?: Database["public"]["Enums"]["tipo_acao_dev"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "desenvolvimento_acoes_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback: {
+        Row: {
+          autor_id: string
+          colaborador_id: string
+          contexto: string | null
+          created_at: string
+          data: string
+          descricao: string
+          id: string
+          impacto: string | null
+          sugestao_melhoria: string | null
+          tipo: Database["public"]["Enums"]["tipo_feedback"]
+        }
+        Insert: {
+          autor_id: string
+          colaborador_id: string
+          contexto?: string | null
+          created_at?: string
+          data?: string
+          descricao: string
+          id?: string
+          impacto?: string | null
+          sugestao_melhoria?: string | null
+          tipo: Database["public"]["Enums"]["tipo_feedback"]
+        }
+        Update: {
+          autor_id?: string
+          colaborador_id?: string
+          contexto?: string | null
+          created_at?: string
+          data?: string
+          descricao?: string
+          id?: string
+          impacto?: string | null
+          sugestao_melhoria?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_feedback"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ferias_periodos: {
         Row: {
           abono_pecuniario: boolean
@@ -376,6 +470,65 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "licencas_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      one_on_one: {
+        Row: {
+          colaborador_id: string
+          confidencial: boolean
+          created_at: string
+          data: string
+          gestor_id: string
+          id: string
+          pauta: string | null
+          pontos_atencao: string | null
+          pontos_positivos: string | null
+          proximos_passos: string | null
+          resumo: string
+          riscos: string | null
+          status: Database["public"]["Enums"]["status_one_on_one"]
+          updated_at: string
+        }
+        Insert: {
+          colaborador_id: string
+          confidencial?: boolean
+          created_at?: string
+          data?: string
+          gestor_id: string
+          id?: string
+          pauta?: string | null
+          pontos_atencao?: string | null
+          pontos_positivos?: string | null
+          proximos_passos?: string | null
+          resumo: string
+          riscos?: string | null
+          status?: Database["public"]["Enums"]["status_one_on_one"]
+          updated_at?: string
+        }
+        Update: {
+          colaborador_id?: string
+          confidencial?: boolean
+          created_at?: string
+          data?: string
+          gestor_id?: string
+          id?: string
+          pauta?: string | null
+          pontos_atencao?: string | null
+          pontos_positivos?: string | null
+          proximos_passos?: string | null
+          resumo?: string
+          riscos?: string | null
+          status?: Database["public"]["Enums"]["status_one_on_one"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "one_on_one_colaborador_id_fkey"
             columns: ["colaborador_id"]
             isOneToOne: false
             referencedRelation: "colaboradores"
@@ -576,14 +729,19 @@ export type Database = {
         | "gerente_01"
         | "gerente_02"
         | "gerente_03"
+      origem_acao: "one_on_one" | "feedback"
+      status_acao_dev: "pendente" | "em_andamento" | "concluido"
       status_ferias: "agendada" | "concluida" | "cancelada"
+      status_one_on_one: "planejado" | "realizado"
       status_periodo_aquisitivo:
         | "aberto"
         | "parcial"
         | "concluido"
         | "vencido"
         | "desconsiderado"
+      tipo_acao_dev: "curso" | "pratica" | "comportamento"
       tipo_ausencia: "ferias" | "licenca_medica" | "licenca_maternidade"
+      tipo_feedback: "positivo" | "construtivo" | "reconhecimento" | "ajuste"
       tipo_licenca: "medica" | "maternidade" | "outros"
       tipo_vinculo: "clt" | "terceirizado"
     }
@@ -726,7 +884,10 @@ export const Constants = {
         "gerente_02",
         "gerente_03",
       ],
+      origem_acao: ["one_on_one", "feedback"],
+      status_acao_dev: ["pendente", "em_andamento", "concluido"],
       status_ferias: ["agendada", "concluida", "cancelada"],
+      status_one_on_one: ["planejado", "realizado"],
       status_periodo_aquisitivo: [
         "aberto",
         "parcial",
@@ -734,7 +895,9 @@ export const Constants = {
         "vencido",
         "desconsiderado",
       ],
+      tipo_acao_dev: ["curso", "pratica", "comportamento"],
       tipo_ausencia: ["ferias", "licenca_medica", "licenca_maternidade"],
+      tipo_feedback: ["positivo", "construtivo", "reconhecimento", "ajuste"],
       tipo_licenca: ["medica", "maternidade", "outros"],
       tipo_vinculo: ["clt", "terceirizado"],
     },

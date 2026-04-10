@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, DollarSign, TrendingUp } from "lucide-react";
+import { Users, DollarSign, TrendingUp, Users2, MessageSquare, Target, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { TIPO_LABELS, TIPO_COLORS, AusenciaBadge } from "@/components/AusenciasManager";
@@ -59,6 +59,10 @@ export default function Index() {
   const [ausentes, setAusentes] = useState<any[]>([]);
   const [periodosVencidos, setPeriodosVencidos] = useState(0);
   const [periodosVencendo, setPeriodosVencendo] = useState(0);
+  const [pctComOneOnOne, setPctComOneOnOne] = useState(0);
+  const [feedbacksMes, setFeedbacksMes] = useState(0);
+  const [acoesAbertas, setAcoesAbertas] = useState(0);
+  const [taxaConclusao, setTaxaConclusao] = useState(0);
 
   useEffect(() => {
     supabase
@@ -88,6 +92,28 @@ export default function Index() {
       setPeriodosVencidos((data || []).filter((p) => p.status === "vencido").length);
       const in60 = new Date(Date.now() + 60 * 86400000).toISOString().split("T")[0];
       setPeriodosVencendo((data || []).filter((p) => p.status !== "vencido" && p.status !== "concluido" && p.data_limite_concessao <= in60 && p.data_limite_concessao >= today).length);
+    });
+
+    // Feedback & 1:1 KPIs
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+    const mesAtual = new Date().toISOString().slice(0, 7);
+    const inicioMes = mesAtual + "-01";
+
+    Promise.all([
+      supabase.from("colaboradores").select("id", { count: "exact", head: true }).eq("ativo", true),
+      supabase.from("one_on_one").select("colaborador_id").gte("data", thirtyDaysAgo),
+      supabase.from("feedback").select("id", { count: "exact", head: true }).gte("data", inicioMes),
+      supabase.from("desenvolvimento_acoes").select("status"),
+    ]).then(([colabCount, oooRes, fbCount, acoesRes]) => {
+      const totalColabs = colabCount.count || 0;
+      const colabsCom1on1 = new Set((oooRes.data || []).map((o: any) => o.colaborador_id)).size;
+      setPctComOneOnOne(totalColabs > 0 ? Math.round((colabsCom1on1 / totalColabs) * 100) : 0);
+      setFeedbacksMes(fbCount.count || 0);
+      const allAcoes = acoesRes.data || [];
+      const abertas = allAcoes.filter((a: any) => a.status !== "concluido").length;
+      const concluidas = allAcoes.filter((a: any) => a.status === "concluido").length;
+      setAcoesAbertas(abertas);
+      setTaxaConclusao(allAcoes.length > 0 ? Math.round((concluidas / allAcoes.length) * 100) : 0);
     });
   }, []);
 
@@ -266,7 +292,48 @@ export default function Index() {
         </div>
       )}
 
-      {/* Colaboradores ausentes */}
+      {/* Feedback & 1:1 KPIs */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">1:1 nos últimos 30 dias</CardTitle>
+            <Users2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{pctComOneOnOne}%</p>
+            <p className="text-xs text-muted-foreground">dos colaboradores</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Feedbacks no mês</CardTitle>
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{feedbacksMes}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Ações abertas</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{acoesAbertas}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Conclusão de ações</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{taxaConclusao}%</p>
+          </CardContent>
+        </Card>
+      </div>
+
+
       {ausentes.length > 0 && (
         <Card>
           <CardHeader>
