@@ -15,6 +15,7 @@ import { Constants } from "@/integrations/supabase/types";
 import { NIVEL_OPTIONS, nivelLabel } from "@/lib/nivelLabels";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useOrigensRecurso } from "@/hooks/useOrigensRecurso";
+import { useLideres } from "@/hooks/useLideres";
 
 type Colaborador = Tables<"colaboradores">;
 
@@ -31,6 +32,7 @@ export default function Colaboradores() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const origensRecurso = useOrigensRecurso();
+  const lideres = useLideres();
 
   const load = async () => {
     const { data } = await supabase.from("colaboradores").select("*").eq("ativo", true).order("nome");
@@ -228,7 +230,15 @@ export default function Colaboradores() {
                 </div>
                 <div className="space-y-2">
                   <Label>Gestor Direto</Label>
-                  <Input value={form.gestor_direto || ""} onChange={(e) => setForm({ ...form, gestor_direto: e.target.value })} placeholder="Nome do gestor direto" />
+                  <Select value={form.gestor_direto || ""} onValueChange={(v) => setForm({ ...form, gestor_direto: v === "_none_" ? "" : v })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none_">Nenhum</SelectItem>
+                      {lideres.map((l) => (
+                        <SelectItem key={l.id} value={l.nome}>{l.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex items-center gap-2 pt-6">
                   <input type="checkbox" checked={form.lideranca || false} onChange={(e) => setForm({ ...form, lideranca: e.target.checked })} className="h-4 w-4" />
