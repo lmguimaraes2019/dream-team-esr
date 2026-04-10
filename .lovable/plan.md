@@ -1,26 +1,57 @@
 
 
-# Corrigir limite de geração de períodos aquisitivos
+# Adicionar "Número Prog. de Férias" e "Data Limite" às Férias
 
-## Problema
-A função `gerarPeriodosAquisitivos` gera períodos até `hoje + 12 meses`, o que cria períodos futuros como 2027/2028. O correto é gerar apenas períodos cujo **início** caia até o final do ano corrente (31/12 do ano atual).
+## Resumo
 
-## Mudança
+Adicionar o campo `numero_programacao` (1, 2 ou 3) à tabela `ferias_periodos` para identificar cada parcela do fracionamento de férias (máximo 3). Exibir também a "Data Limite Máxima" do período aquisitivo nas tabelas. Atualizar importação para reconhecer essas colunas.
 
-**Arquivo:** `src/lib/feriasLogic.ts`, função `gerarPeriodosAquisitivos`
+## Mudanças
 
-Substituir:
-```ts
-const limite = addMonths(hoje, 12);
+### 1. Migração — nova coluna
+
+```sql
+ALTER TABLE public.ferias_periodos 
+  ADD COLUMN numero_programacao smallint NOT NULL DEFAULT 1;
+
+-- Constraint: 1, 2 ou 3
+ALTER TABLE public.ferias_periodos 
+  ADD CONSTRAINT ferias_numero_prog_check 
+  CHECK (numero_programacao BETWEEN 1 AND 3);
 ```
 
-Por:
-```ts
-// Gerar apenas períodos que iniciam até 31/12 do ano corrente
-const limite = new Date(hoje.getFullYear(), 11, 31);
-```
+### 2. `FeriasAgendadasTab.tsx`
 
-Isso garante que um colaborador admitido em 15/03/2020 terá períodos gerados até no máximo o que inicia em 15/03/2025 (englobando o ano corrente 2026), mas não gerará 2027/2028.
+- Adicionar `numero_programacao` ao form (select com opções 1ª, 2ª, 3ª)
+- Adicionar coluna "Nº Prog." na tabela
+- Adicionar coluna "Data Limite" buscando `data_limite_concessao` do período aquisitivo vinculado (já vem no join)
+- Atualizar query select para incluir `data_limite_concessao` no join de `periodos_aquisitivos`
+- Adicionar ordenação por `numero_programacao`
 
-Nenhuma outra alteração necessária — a lógica de cutoff e status permanece igual.
+### 3. `PeriodosAquisitivosTab.tsx`
+
+- Adicionar coluna "Data Limite" exibindo `data_limite_concessao` formatada
+
+### 4. `ImportacaoTab.tsx`
+
+- Adicionar `numero_programacao` e `data_limite_concessao` ao `ImportRow`
+- Reconhecer colunas "Número Prog. de Férias" / "Programação" da planilha RNP
+- Parsear valores como "1a", "2a", "3a" → 1, 2, 3
+- Atualizar template XLSX com a nova coluna
+- Incluir no preview e no `confirmImport`
+
+### 5. Validação em `feriasLogic.ts`
+
+- Adicionar validação: máximo 3 programações por período aquisitivo
+- Não permitir dois registros com mesmo `numero_programacao` no mesmo período aquisitivo
+
+## Arquivos alterados
+
+| Ação | Arquivo |
+|---|---|
+| Migração | Nova migração — coluna `numero_programacao` |
+| Editar | `src/components/ferias/FeriasAgendadasTab.tsx` |
+| Editar | `src/components/ferias/PeriodosAquisitivosTab.tsx` |
+| Editar | `src/components/ferias/ImportacaoTab.tsx` |
+| Editar | `src/lib/feriasLogic.ts` |
 
