@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
 import { differenceInYears, differenceInMonths, parseISO } from "date-fns";
 import { nivelLabel } from "@/lib/nivelLabels";
 import type { Tables } from "@/integrations/supabase/types";
@@ -30,6 +30,7 @@ export default function ColaboradorDetalhe() {
   const [editOpen, setEditOpen] = useState(false);
   const [ausenciaAtiva, setAusenciaAtiva] = useState<{ tipo: string; label: string } | null>(null);
   const [temFeriasNoCiclo, setTemFeriasNoCiclo] = useState(true);
+  const [showCustos, setShowCustos] = useState(false);
   const { isAdmin } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -163,6 +164,9 @@ export default function ColaboradorDetalhe() {
             {!isTerceirizado && (colab as any).origem_recurso && (
               <Row label="Origem de Recurso" value={(colab as any).origem_recurso} />
             )}
+            {(colab as any).gestor_direto && (
+              <Row label="Gestor Direto" value={(colab as any).gestor_direto} />
+            )}
           </CardContent>
         </Card>
 
@@ -204,39 +208,51 @@ export default function ColaboradorDetalhe() {
       {/* Custos detalhados — only for CLT */}
       {!isTerceirizado && custo ? (
         <Card>
-          <CardHeader><CardTitle className="text-base">Custos Detalhados — {custo.mes_referencia}</CardTitle></CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-              <CustoSection title="Salário"><CustoItem label="Salário Base" value={custo.salario_base} /></CustoSection>
-              <CustoSection title="Encargos">
-                <CustoItem label="INSS" value={custo.inss} />
-                <CustoItem label="FGTS" value={custo.fgts} />
-                <CustoItem label="PIS" value={custo.pis} />
-              </CustoSection>
-              <CustoSection title="Benefícios">
-                <CustoItem label="VR/VA" value={custo.vr_va} />
-                <CustoItem label="VT" value={custo.vt} />
-                <CustoItem label="Plano de Saúde" value={custo.plano_saude} />
-                <CustoItem label="Seguro" value={custo.seguro} />
-                <CustoItem label="Internet" value={custo.internet} />
-              </CustoSection>
-              <CustoSection title="Provisões">
-                <CustoItem label="Férias" value={custo.ferias} />
-                <CustoItem label="1/3 Férias" value={custo.um_terco_ferias} />
-                <CustoItem label="13º" value={custo.decimo_terceiro} />
-              </CustoSection>
-            </div>
-            <div className="mt-6 flex gap-6 border-t pt-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Custo Mensal</p>
-                <p className="text-xl font-bold text-primary">{fmt(custo.custo_mensal)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Custo Anual</p>
-                <p className="text-xl font-bold">{fmt(custo.custo_anual)}</p>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Custos Detalhados</CardTitle>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">Dados de {custo.mes_referencia}</span>
+                <Button variant="ghost" size="icon" onClick={() => setShowCustos(!showCustos)} className="h-8 w-8">
+                  {showCustos ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
               </div>
             </div>
-          </CardContent>
+          </CardHeader>
+          {showCustos && (
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+                <CustoSection title="Salário"><CustoItem label="Salário Base" value={custo.salario_base} /></CustoSection>
+                <CustoSection title="Encargos">
+                  <CustoItem label="INSS" value={custo.inss} />
+                  <CustoItem label="FGTS" value={custo.fgts} />
+                  <CustoItem label="PIS" value={custo.pis} />
+                </CustoSection>
+                <CustoSection title="Benefícios">
+                  <CustoItem label="VR/VA" value={custo.vr_va} />
+                  <CustoItem label="VT" value={custo.vt} />
+                  <CustoItem label="Plano de Saúde" value={custo.plano_saude} />
+                  <CustoItem label="Seguro" value={custo.seguro} />
+                  <CustoItem label="Internet" value={custo.internet} />
+                </CustoSection>
+                <CustoSection title="Provisões">
+                  <CustoItem label="Férias" value={custo.ferias} />
+                  <CustoItem label="1/3 Férias" value={custo.um_terco_ferias} />
+                  <CustoItem label="13º" value={custo.decimo_terceiro} />
+                </CustoSection>
+              </div>
+              <div className="mt-6 flex gap-6 border-t pt-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Custo Mensal</p>
+                  <p className="text-xl font-bold text-primary">{fmt(custo.custo_mensal)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Custo Anual</p>
+                  <p className="text-xl font-bold">{fmt(custo.custo_anual)}</p>
+                </div>
+              </div>
+            </CardContent>
+          )}
         </Card>
       ) : !isTerceirizado ? (
         <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhum custo registrado.</CardContent></Card>
