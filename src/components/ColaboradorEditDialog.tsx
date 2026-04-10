@@ -13,6 +13,7 @@ import { Camera } from "lucide-react";
 import PhotoCropDialog from "@/components/PhotoCropDialog";
 import type { Tables } from "@/integrations/supabase/types";
 import { useOrigensRecurso } from "@/hooks/useOrigensRecurso";
+import { useLideres } from "@/hooks/useLideres";
 
 type Colaborador = Tables<"colaboradores">;
 
@@ -34,6 +35,7 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
   const fileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const origensRecurso = useOrigensRecurso();
+  const lideres = useLideres();
 
   const isTerceirizado = form.tipo_vinculo === "terceirizado";
 
@@ -268,7 +270,15 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
           </div>
           <div className="space-y-2">
             <Label>Gestor Direto</Label>
-            <Input value={(form as any).gestor_direto || ""} onChange={(e) => setForm({ ...form, gestor_direto: e.target.value } as any)} placeholder="Nome do gestor direto" />
+            <Select value={(form as any).gestor_direto || ""} onValueChange={(v) => setForm({ ...form, gestor_direto: v === "_none_" ? "" : v } as any)}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none_">Nenhum</SelectItem>
+                {lideres.map((l) => (
+                  <SelectItem key={l.id} value={l.nome}>{l.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex items-center gap-2 pt-6">
             <input type="checkbox" checked={form.lideranca} onChange={(e) => setForm({ ...form, lideranca: e.target.checked })} className="h-4 w-4" />
