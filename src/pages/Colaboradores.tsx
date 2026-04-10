@@ -32,6 +32,7 @@ export default function Colaboradores() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const origensRecurso = useOrigensRecurso();
+  const lideres = useLideres();
 
   const load = async () => {
     const { data } = await supabase.from("colaboradores").select("*").eq("ativo", true).order("nome");
