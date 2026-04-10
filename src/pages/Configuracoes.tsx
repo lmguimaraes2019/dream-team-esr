@@ -17,13 +17,16 @@ export default function Configuracoes() {
   const [taxa, setTaxa] = useState("");
   const [tipo, setTipo] = useState("taxa");
   const [editId, setEditId] = useState<string | null>(null);
+  const [dataCorte, setDataCorte] = useState("");
 
   const [users, setUsers] = useState<any[]>([]);
   const { toast } = useToast();
 
   const loadEncargos = async () => {
     const { data } = await supabase.from("configuracoes_encargos").select("*").order("nome");
-    setEncargos(data || []);
+    setEncargos((data || []).filter((e: any) => e.nome !== "data_corte_periodos_aquisitivos"));
+    const corte = (data || []).find((e: any) => e.nome === "data_corte_periodos_aquisitivos");
+    if (corte) setDataCorte(corte.data_vigencia);
   };
 
   const loadUsers = async () => {
@@ -103,9 +106,36 @@ export default function Configuracoes() {
     return `${(Number(e.taxa) * 100).toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}%`;
   };
 
+  const handleSaveDataCorte = async () => {
+    if (!dataCorte) return;
+    const { error } = await supabase
+      .from("configuracoes_encargos")
+      .update({ data_vigencia: dataCorte } as any)
+      .eq("nome", "data_corte_periodos_aquisitivos");
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Data de corte salva!" });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Configurações</h1>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Data de Corte — Períodos Aquisitivos</CardTitle></CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-3">O sistema só considerará períodos aquisitivos a partir desta data.</p>
+          <div className="flex gap-3 items-end">
+            <div className="space-y-2">
+              <Label>Data de Corte</Label>
+              <Input type="date" value={dataCorte} onChange={(e) => setDataCorte(e.target.value)} className="w-48" />
+            </div>
+            <Button onClick={handleSaveDataCorte}>Salvar</Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader><CardTitle className="text-base">Custos mensais, encargos e benefícios</CardTitle></CardHeader>

@@ -246,6 +246,69 @@ export type Database = {
           },
         ]
       }
+      ferias_periodos: {
+        Row: {
+          abono_pecuniario: boolean
+          colaborador_id: string
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          decimo_terceiro_antecipado: boolean
+          dias_abono: number
+          dias_gozo: number
+          id: string
+          observacao: string | null
+          periodo_aquisitivo_id: string
+          status: Database["public"]["Enums"]["status_ferias"]
+          updated_at: string
+        }
+        Insert: {
+          abono_pecuniario?: boolean
+          colaborador_id: string
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          decimo_terceiro_antecipado?: boolean
+          dias_abono?: number
+          dias_gozo: number
+          id?: string
+          observacao?: string | null
+          periodo_aquisitivo_id: string
+          status?: Database["public"]["Enums"]["status_ferias"]
+          updated_at?: string
+        }
+        Update: {
+          abono_pecuniario?: boolean
+          colaborador_id?: string
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          decimo_terceiro_antecipado?: boolean
+          dias_abono?: number
+          dias_gozo?: number
+          id?: string
+          observacao?: string | null
+          periodo_aquisitivo_id?: string
+          status?: Database["public"]["Enums"]["status_ferias"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ferias_periodos_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ferias_periodos_periodo_aquisitivo_id_fkey"
+            columns: ["periodo_aquisitivo_id"]
+            isOneToOne: false
+            referencedRelation: "periodos_aquisitivos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       importacoes: {
         Row: {
           created_at: string
@@ -276,6 +339,47 @@ export type Database = {
         }
         Relationships: []
       }
+      licencas: {
+        Row: {
+          colaborador_id: string
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          id: string
+          observacao: string | null
+          tipo: Database["public"]["Enums"]["tipo_licenca"]
+          updated_at: string
+        }
+        Insert: {
+          colaborador_id: string
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          id?: string
+          observacao?: string | null
+          tipo: Database["public"]["Enums"]["tipo_licenca"]
+          updated_at?: string
+        }
+        Update: {
+          colaborador_id?: string
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          id?: string
+          observacao?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_licenca"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "licencas_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       origens_recurso: {
         Row: {
           created_at: string
@@ -293,6 +397,74 @@ export type Database = {
           nome?: string
         }
         Relationships: []
+      }
+      periodos_aquisitivos: {
+        Row: {
+          colaborador_id: string
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          data_limite_concessao: string
+          desconsiderado_em: string | null
+          desconsiderado_por: string | null
+          desconsiderar_periodo: boolean
+          dias_abono: number
+          dias_agendados: number
+          dias_direito: number
+          dias_gozados: number
+          id: string
+          motivo_desconsideracao: string | null
+          saldo_disponivel: number
+          status: Database["public"]["Enums"]["status_periodo_aquisitivo"]
+          updated_at: string
+        }
+        Insert: {
+          colaborador_id: string
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          data_limite_concessao: string
+          desconsiderado_em?: string | null
+          desconsiderado_por?: string | null
+          desconsiderar_periodo?: boolean
+          dias_abono?: number
+          dias_agendados?: number
+          dias_direito?: number
+          dias_gozados?: number
+          id?: string
+          motivo_desconsideracao?: string | null
+          saldo_disponivel?: number
+          status?: Database["public"]["Enums"]["status_periodo_aquisitivo"]
+          updated_at?: string
+        }
+        Update: {
+          colaborador_id?: string
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          data_limite_concessao?: string
+          desconsiderado_em?: string | null
+          desconsiderado_por?: string | null
+          desconsiderar_periodo?: boolean
+          dias_abono?: number
+          dias_agendados?: number
+          dias_direito?: number
+          dias_gozados?: number
+          id?: string
+          motivo_desconsideracao?: string | null
+          saldo_disponivel?: number
+          status?: Database["public"]["Enums"]["status_periodo_aquisitivo"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "periodos_aquisitivos_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -401,7 +573,15 @@ export type Database = {
         | "gerente_01"
         | "gerente_02"
         | "gerente_03"
+      status_ferias: "agendada" | "concluida" | "cancelada"
+      status_periodo_aquisitivo:
+        | "aberto"
+        | "parcial"
+        | "concluido"
+        | "vencido"
+        | "desconsiderado"
       tipo_ausencia: "ferias" | "licenca_medica" | "licenca_maternidade"
+      tipo_licenca: "medica" | "maternidade" | "outros"
       tipo_vinculo: "clt" | "terceirizado"
     }
     CompositeTypes: {
@@ -543,7 +723,16 @@ export const Constants = {
         "gerente_02",
         "gerente_03",
       ],
+      status_ferias: ["agendada", "concluida", "cancelada"],
+      status_periodo_aquisitivo: [
+        "aberto",
+        "parcial",
+        "concluido",
+        "vencido",
+        "desconsiderado",
+      ],
       tipo_ausencia: ["ferias", "licenca_medica", "licenca_maternidade"],
+      tipo_licenca: ["medica", "maternidade", "outros"],
       tipo_vinculo: ["clt", "terceirizado"],
     },
   },

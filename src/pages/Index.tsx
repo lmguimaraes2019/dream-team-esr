@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Users, DollarSign, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format, parseISO } from "date-fns";
-import { AusenciaBadge } from "@/components/AusenciasManager";
+import { TIPO_LABELS, TIPO_COLORS, AusenciaBadge } from "@/components/AusenciasManager";
 import { nivelLabel } from "@/lib/nivelLabels";
 import { MaleIcon, FemaleIcon, OtherIcon } from "@/components/GenderIcons";
 import {
@@ -57,6 +57,8 @@ export default function Index() {
   const [distNivel, setDistNivel] = useState<any[]>([]);
   const [distTrajetoria, setDistTrajetoria] = useState<any[]>([]);
   const [ausentes, setAusentes] = useState<any[]>([]);
+  const [periodosVencidos, setPeriodosVencidos] = useState(0);
+  const [periodosVencendo, setPeriodosVencendo] = useState(0);
 
   useEffect(() => {
     supabase
@@ -68,14 +70,25 @@ export default function Index() {
         if (unique.length > 0 && !mesRef) setMesRef(unique[0]);
       });
 
-    // Load current absences
+    // Load current absences from ferias_periodos + licencas
     const today = new Date().toISOString().split("T")[0];
-    supabase
-      .from("ausencias")
-      .select("*, colaboradores(nome)")
-      .lte("data_inicio", today)
-      .gte("data_fim", today)
-      .then(({ data }) => setAusentes(data || []));
+    Promise.all([
+      supabase.from("ferias_periodos").select("*, colaboradores(nome)").in("status", ["agendada", "concluida"]).lte("data_inicio", today).gte("data_fim", today),
+      supabase.from("licencas").select("*, colaboradores(nome)").lte("data_inicio", today).gte("data_fim", today),
+    ]).then(([fRes, lRes]) => {
+      const all = [
+        ...(fRes.data || []).map((f: any) => ({ ...f, tipo: "ferias" })),
+        ...(lRes.data || []).map((l: any) => ({ ...l, tipo: l.tipo === "medica" ? "licenca_medica" : l.tipo === "maternidade" ? "licenca_maternidade" : "outros" })),
+      ];
+      setAusentes(all);
+    });
+
+    // Load periodos stats
+    supabase.from("periodos_aquisitivos").select("status, data_limite_concessao").eq("desconsiderar_periodo", false).then(({ data }) => {
+      setPeriodosVencidos((data || []).filter((p) => p.status === "vencido").length);
+      const in60 = new Date(Date.now() + 60 * 86400000).toISOString().split("T")[0];
+      setPeriodosVencendo((data || []).filter((p) => p.status !== "vencido" && p.status !== "concluido" && p.data_limite_concessao <= in60 && p.data_limite_concessao >= today).length);
+    });
   }, []);
 
   useEffect(() => {
@@ -227,6 +240,28 @@ export default function Index() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Períodos vencidos/vencendo cards */}
+      {(periodosVencidos > 0 || periodosVencendo > 0) && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Períodos Vencidos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-destructive">{periodosVencidos}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Vencendo em 60 dias</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-amber-500">{periodosVencendo}</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Colaboradores ausentes */}
       {ausentes.length > 0 && (

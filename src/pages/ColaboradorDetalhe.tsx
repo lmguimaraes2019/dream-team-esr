@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
-import { differenceInYears, differenceInMonths, parseISO, isWithinInterval } from "date-fns";
+import { differenceInYears, differenceInMonths, parseISO } from "date-fns";
 import { nivelLabel } from "@/lib/nivelLabels";
 import type { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import ColaboradorEditDialog from "@/components/ColaboradorEditDialog";
 import SalaryRangeRuler from "@/components/SalaryRangeRuler";
-import AusenciasManager, { AusenciaBadge } from "@/components/AusenciasManager";
+import ColaboradorFerias from "@/components/ferias/ColaboradorFerias";
 import { useToast } from "@/hooks/use-toast";
 
 type Colaborador = Tables<"colaboradores">;
@@ -27,13 +27,13 @@ export default function ColaboradorDetalhe() {
   const [colab, setColab] = useState<Colaborador | null>(null);
   const [custo, setCusto] = useState<CustoMensal | null>(null);
   const [editOpen, setEditOpen] = useState(false);
-  const [ausenciaAtiva, setAusenciaAtiva] = useState<{ tipo: string } | null>(null);
+  const [ausenciaAtiva, setAusenciaAtiva] = useState<{ tipo: string; label: string } | null>(null);
   const [temFeriasNoCiclo, setTemFeriasNoCiclo] = useState(true);
   const { isAdmin } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const loadData = () => {
+  const loadData = async () => {
     if (!id) return;
     supabase.from("colaboradores").select("*").eq("id", id).single().then(({ data }) => setColab(data));
     supabase
@@ -44,30 +44,32 @@ export default function ColaboradorDetalhe() {
       .limit(1)
       .maybeSingle()
       .then(({ data }) => setCusto(data));
-    // Check active absence
-    const today = new Date().toISOString().split("T")[0];
-    supabase
-      .from("ausencias")
-      .select("tipo")
-      .eq("colaborador_id", id)
-      .lte("data_inicio", today)
-      .gte("data_fim", today)
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => setAusenciaAtiva(data as any));
 
-    // Check if has vacation in current year
-    const anoAtual = new Date().getFullYear();
-    supabase
-      .from("ausencias")
+    // Check active absence from ferias_periodos + licencas
+    const today = new Date().toISOString().split("T")[0];
+    const [{ data: feriasAtivas }, { data: licencasAtivas }] = await Promise.all([
+      supabase.from("ferias_periodos").select("id").eq("colaborador_id", id).in("status", ["agendada", "concluida"]).lte("data_inicio", today).gte("data_fim", today).limit(1).maybeSingle(),
+      supabase.from("licencas").select("id, tipo").eq("colaborador_id", id).lte("data_inicio", today).gte("data_fim", today).limit(1).maybeSingle(),
+    ]);
+
+    if (feriasAtivas) {
+      setAusenciaAtiva({ tipo: "ferias", label: "Férias" });
+    } else if (licencasAtivas) {
+      const labels: Record<string, string> = { medica: "Lic. Médica", maternidade: "Lic. Maternidade", outros: "Licença" };
+      setAusenciaAtiva({ tipo: licencasAtivas.tipo, label: labels[licencasAtivas.tipo] || "Licença" });
+    } else {
+      setAusenciaAtiva(null);
+    }
+
+    // Check if CLT has scheduled vacation (any non-cancelled ferias)
+    const { data: feriasAgendadas } = await supabase
+      .from("ferias_periodos")
       .select("id")
       .eq("colaborador_id", id)
-      .eq("tipo", "ferias")
-      .gte("data_inicio", `${anoAtual}-01-01`)
-      .lte("data_inicio", `${anoAtual}-12-31`)
+      .neq("status", "cancelada")
       .limit(1)
-      .maybeSingle()
-      .then(({ data }) => setTemFeriasNoCiclo(!!data));
+      .maybeSingle();
+    setTemFeriasNoCiclo(!!feriasAgendadas);
   };
 
   useEffect(() => { loadData(); }, [id]);
@@ -86,20 +88,12 @@ export default function ColaboradorDetalhe() {
   if (!colab) return <div className="p-8 text-muted-foreground">Carregando...</div>;
 
   const isTerceirizado = colab.tipo_vinculo === "terceirizado";
-
   const now = new Date();
   const admissao = parseISO(colab.data_admissao);
   const anos = differenceInYears(now, admissao);
   const mesesRestantes = differenceInMonths(now, admissao) % 12;
   const tempoCasa = `${anos} ano${anos !== 1 ? "s" : ""} e ${mesesRestantes} ${mesesRestantes !== 1 ? "meses" : "mês"}`;
-
-  const initials = colab.nome
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
+  const initials = colab.nome.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
   const fotoUrl = (colab as any).foto_url;
 
   return (
@@ -115,7 +109,9 @@ export default function ColaboradorDetalhe() {
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-3xl font-bold">{colab.nome}</h1>
-            {ausenciaAtiva && <AusenciaBadge tipo={ausenciaAtiva.tipo} />}
+            {ausenciaAtiva && (
+              <Badge className="bg-amber-500 text-white border-0">{ausenciaAtiva.label}</Badge>
+            )}
             {!temFeriasNoCiclo && colab.tipo_vinculo === "clt" && (
               <Badge className="bg-destructive text-destructive-foreground border-0 text-xs">Sem férias previstas</Badge>
             )}
@@ -131,16 +127,12 @@ export default function ColaboradorDetalhe() {
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm">
-                  <Trash2 className="mr-2 h-4 w-4" />Excluir
-                </Button>
+                <Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4" />Excluir</Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Excluir colaborador?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta ação é irreversível. Todos os dados de custos e ausências deste colaborador serão removidos.
-                  </AlertDialogDescription>
+                  <AlertDialogDescription>Esta ação é irreversível.</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
@@ -153,12 +145,7 @@ export default function ColaboradorDetalhe() {
       </div>
 
       {isAdmin && (
-        <ColaboradorEditDialog
-          colaborador={colab}
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          onSaved={loadData}
-        />
+        <ColaboradorEditDialog colaborador={colab} open={editOpen} onOpenChange={setEditOpen} onSaved={loadData} />
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -200,34 +187,23 @@ export default function ColaboradorDetalhe() {
               <Row label="Nível de Complexidade" value={nivelLabel(colab.nivel_complexidade)} />
               <Row label="Grupo" value={String(colab.grupo)} />
               {custo && (
-                <SalaryRangeRuler
-                  trajetoria={colab.trajetoria}
-                  nivel_complexidade={colab.nivel_complexidade}
-                  grupo={colab.grupo}
-                  salario={custo.salario_base}
-                />
+                <SalaryRangeRuler trajetoria={colab.trajetoria} nivel_complexidade={colab.nivel_complexidade} grupo={colab.grupo} salario={custo.salario_base} />
               )}
             </CardContent>
           </Card>
         )}
       </div>
 
-      {/* Ausências */}
-      <AusenciasManager colaboradorId={colab.id} isAdmin={isAdmin} />
+      {/* Férias e Licenças — new component */}
+      <ColaboradorFerias colaboradorId={colab.id} />
 
       {/* Custos detalhados — only for CLT */}
       {!isTerceirizado && custo ? (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              Custos Detalhados — {custo.mes_referencia}
-            </CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-base">Custos Detalhados — {custo.mes_referencia}</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-              <CustoSection title="Salário">
-                <CustoItem label="Salário Base" value={custo.salario_base} />
-              </CustoSection>
+              <CustoSection title="Salário"><CustoItem label="Salário Base" value={custo.salario_base} /></CustoSection>
               <CustoSection title="Encargos">
                 <CustoItem label="INSS" value={custo.inss} />
                 <CustoItem label="FGTS" value={custo.fgts} />
@@ -259,14 +235,9 @@ export default function ColaboradorDetalhe() {
           </CardContent>
         </Card>
       ) : !isTerceirizado ? (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            Nenhum custo registrado para este colaborador.
-          </CardContent>
-        </Card>
+        <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhum custo registrado.</CardContent></Card>
       ) : null}
 
-      {/* Terceirizado cost summary */}
       {isTerceirizado && (colab as any).custo_mensal_terceirizado && (
         <Card>
           <CardHeader><CardTitle className="text-base">Resumo de Custos</CardTitle></CardHeader>
