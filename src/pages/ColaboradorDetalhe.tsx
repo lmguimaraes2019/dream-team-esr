@@ -28,6 +28,7 @@ export default function ColaboradorDetalhe() {
   const [custo, setCusto] = useState<CustoMensal | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [ausenciaAtiva, setAusenciaAtiva] = useState<{ tipo: string } | null>(null);
+  const [temFeriasNoCiclo, setTemFeriasNoCiclo] = useState(true);
   const { isAdmin } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -54,6 +55,19 @@ export default function ColaboradorDetalhe() {
       .limit(1)
       .maybeSingle()
       .then(({ data }) => setAusenciaAtiva(data as any));
+
+    // Check if has vacation in current year
+    const anoAtual = new Date().getFullYear();
+    supabase
+      .from("ausencias")
+      .select("id")
+      .eq("colaborador_id", id)
+      .eq("tipo", "ferias")
+      .gte("data_inicio", `${anoAtual}-01-01`)
+      .lte("data_inicio", `${anoAtual}-12-31`)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setTemFeriasNoCiclo(!!data));
   };
 
   useEffect(() => { loadData(); }, [id]);
@@ -99,9 +113,12 @@ export default function ColaboradorDetalhe() {
           <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
         </Avatar>
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-3xl font-bold">{colab.nome}</h1>
             {ausenciaAtiva && <AusenciaBadge tipo={ausenciaAtiva.tipo} />}
+            {!temFeriasNoCiclo && colab.tipo_vinculo === "clt" && (
+              <Badge className="bg-destructive text-destructive-foreground border-0 text-xs">Sem férias previstas</Badge>
+            )}
           </div>
           <Badge variant={colab.tipo_vinculo === "clt" ? "default" : "outline"} className="mt-1">
             {colab.tipo_vinculo.toUpperCase()}

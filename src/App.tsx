@@ -11,6 +11,7 @@ import Colaboradores from "./pages/Colaboradores";
 import ColaboradorDetalhe from "./pages/ColaboradorDetalhe";
 import Importacao from "./pages/Importacao";
 import Configuracoes from "./pages/Configuracoes";
+import FeriasLicencas from "./pages/FeriasLicencas";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -45,6 +46,7 @@ function AppRoutes() {
       <Route path="/colaboradores" element={<ProtectedRoute><Colaboradores /></ProtectedRoute>} />
       <Route path="/colaboradores/:id" element={<ProtectedRoute><ColaboradorDetalhe /></ProtectedRoute>} />
       <Route path="/importacao" element={<ProtectedRoute><Importacao /></ProtectedRoute>} />
+      <Route path="/ferias-licencas" element={<ProtectedRoute><FeriasLicencas /></ProtectedRoute>} />
       <Route
         path="/configuracoes"
         element={
