@@ -65,7 +65,7 @@ export function calcularCustos(salario: number, params: ParametrosCusto): Custos
 
 /** Build ParametrosCusto from configuracoes_encargos rows */
 export function buildParametros(rows: { nome: string; taxa: number; tipo: string }[]): ParametrosCusto {
-  const get = (nome: string) => rows.find(r => r.nome === nome);
+  const get = (nome: string) => rows.find(r => r.nome === nome) || rows.find(r => r.nome.toLowerCase().replace(/\s+/g, ' ').includes(nome.toLowerCase().replace(/\s+/g, ' ')));
 
   return {
     inss_taxa: Number(get("INSS")?.taxa ?? 0.255),
