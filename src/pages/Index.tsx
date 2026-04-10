@@ -134,22 +134,25 @@ export default function Index() {
       }))
     );
 
-    // Salário por gênero x liderança
-    const glMap: Record<string, { sum: number; count: number }> = {};
+    // Salário por gênero x liderança — grouped by liderança
+    const glMap: Record<string, Record<string, { sum: number; count: number }>> = {};
     custos.forEach((c) => {
       const col = c.colaboradores as any;
-      const key = `${col?.genero || "outro"}-${col?.lideranca ? "Líder" : "Não Líder"}`;
-      if (!glMap[key]) glMap[key] = { sum: 0, count: 0 };
-      glMap[key].sum += Number(c.salario_base);
-      glMap[key].count++;
+      const lider = col?.lideranca ? "Líder" : "Não Líder";
+      const g = col?.genero || "outro";
+      const gLabel = g.charAt(0).toUpperCase() + g.slice(1);
+      if (!glMap[lider]) glMap[lider] = {};
+      if (!glMap[lider][gLabel]) glMap[lider][gLabel] = { sum: 0, count: 0 };
+      glMap[lider][gLabel].sum += Number(c.salario_base);
+      glMap[lider][gLabel].count++;
     });
     setSalarioGeneroLider(
-      Object.entries(glMap).map(([k, v]) => {
-        const [genero, tipo] = k.split("-");
-        return {
-          grupo: `${genero.charAt(0).toUpperCase() + genero.slice(1)} - ${tipo}`,
-          media: Math.round(v.sum / v.count),
-        };
+      Object.entries(glMap).map(([lider, genders]) => {
+        const row: any = { grupo: lider };
+        Object.entries(genders).forEach(([g, v]) => {
+          row[g] = Math.round(v.sum / v.count);
+        });
+        return row;
       })
     );
 
@@ -329,7 +332,10 @@ export default function Index() {
                     <XAxis dataKey="grupo" tick={{ fontSize: 11 }} />
                     <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                     <Tooltip formatter={(v: number) => fmt(v)} />
-                    <Bar dataKey="media" fill="hsl(160, 60%, 45%)" radius={[4, 4, 0, 0]} />
+                    <Legend />
+                    <Bar dataKey="Feminino" fill={GENDER_COLORS.Feminino} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Masculino" fill={GENDER_COLORS.Masculino} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Outro" fill={GENDER_COLORS.Outro} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
