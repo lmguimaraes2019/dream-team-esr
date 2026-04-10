@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import ColaboradorEditDialog from "@/components/ColaboradorEditDialog";
 import SalaryRangeRuler from "@/components/SalaryRangeRuler";
 import ColaboradorFerias from "@/components/ferias/ColaboradorFerias";
+import ColaboradorFeedback1on1 from "@/components/feedback/ColaboradorFeedback1on1";
 import { useToast } from "@/hooks/use-toast";
 
 type Colaborador = Tables<"colaboradores">;
@@ -194,8 +195,11 @@ export default function ColaboradorDetalhe() {
         )}
       </div>
 
-      {/* Férias e Licenças — new component */}
+      {/* Férias e Licenças */}
       <ColaboradorFerias colaboradorId={colab.id} />
+
+      {/* Feedback e 1:1 */}
+      <ColaboradorFeedback1on1 colaboradorId={colab.id} />
 
       {/* Custos detalhados — only for CLT */}
       {!isTerceirizado && custo ? (

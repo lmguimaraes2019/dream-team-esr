@@ -12,6 +12,7 @@ import ColaboradorDetalhe from "./pages/ColaboradorDetalhe";
 import Importacao from "./pages/Importacao";
 import Configuracoes from "./pages/Configuracoes";
 import FeriasLicencas from "./pages/FeriasLicencas";
+import FeedbackOneOnOne from "./pages/FeedbackOneOnOne";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -47,6 +48,7 @@ function AppRoutes() {
       <Route path="/colaboradores/:id" element={<ProtectedRoute><ColaboradorDetalhe /></ProtectedRoute>} />
       <Route path="/importacao" element={<ProtectedRoute><Importacao /></ProtectedRoute>} />
       <Route path="/ferias-licencas" element={<ProtectedRoute><FeriasLicencas /></ProtectedRoute>} />
+      <Route path="/feedback-1on1" element={<ProtectedRoute><FeedbackOneOnOne /></ProtectedRoute>} />
       <Route
         path="/configuracoes"
         element={
