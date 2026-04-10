@@ -333,9 +333,9 @@ export default function Index() {
                     <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                     <Tooltip formatter={(v: number) => fmt(v)} />
                     <Legend />
-                    <Bar dataKey="Feminino" fill={GENDER_COLORS.Feminino} radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Masculino" fill={GENDER_COLORS.Masculino} radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Outro" fill={GENDER_COLORS.Outro} radius={[4, 4, 0, 0]} />
+                    {salarioGeneroLider.some((d) => d.Feminino) && <Bar dataKey="Feminino" fill={GENDER_COLORS.Feminino} radius={[4, 4, 0, 0]} />}
+                    {salarioGeneroLider.some((d) => d.Masculino) && <Bar dataKey="Masculino" fill={GENDER_COLORS.Masculino} radius={[4, 4, 0, 0]} />}
+                    {salarioGeneroLider.some((d) => d.Outro) && <Bar dataKey="Outro" fill={GENDER_COLORS.Outro} radius={[4, 4, 0, 0]} />}
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
