@@ -79,7 +79,7 @@ export default function ImportacaoTab() {
     XLSX.writeFile(wb, "modelo_importacao_ferias.xlsx");
   };
 
-
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const ab = await file.arrayBuffer();
