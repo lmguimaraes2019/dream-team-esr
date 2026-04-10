@@ -134,22 +134,25 @@ export default function Index() {
       }))
     );
 
-    // Salário por gênero x liderança
-    const glMap: Record<string, { sum: number; count: number }> = {};
+    // Salário por gênero x liderança — grouped by liderança
+    const glMap: Record<string, Record<string, { sum: number; count: number }>> = {};
     custos.forEach((c) => {
       const col = c.colaboradores as any;
-      const key = `${col?.genero || "outro"}-${col?.lideranca ? "Líder" : "Não Líder"}`;
-      if (!glMap[key]) glMap[key] = { sum: 0, count: 0 };
-      glMap[key].sum += Number(c.salario_base);
-      glMap[key].count++;
+      const lider = col?.lideranca ? "Líder" : "Não Líder";
+      const g = col?.genero || "outro";
+      const gLabel = g.charAt(0).toUpperCase() + g.slice(1);
+      if (!glMap[lider]) glMap[lider] = {};
+      if (!glMap[lider][gLabel]) glMap[lider][gLabel] = { sum: 0, count: 0 };
+      glMap[lider][gLabel].sum += Number(c.salario_base);
+      glMap[lider][gLabel].count++;
     });
     setSalarioGeneroLider(
-      Object.entries(glMap).map(([k, v]) => {
-        const [genero, tipo] = k.split("-");
-        return {
-          grupo: `${genero.charAt(0).toUpperCase() + genero.slice(1)} - ${tipo}`,
-          media: Math.round(v.sum / v.count),
-        };
+      Object.entries(glMap).map(([lider, genders]) => {
+        const row: any = { grupo: lider };
+        Object.entries(genders).forEach(([g, v]) => {
+          row[g] = Math.round(v.sum / v.count);
+        });
+        return row;
       })
     );
 
