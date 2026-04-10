@@ -133,11 +133,11 @@ export default function PeriodosAquisitivosTab() {
       if (novosValidos.length === 0) {
         toast({ title: "Todos os períodos já estão gerados." });
       } else {
-        const { error } = await supabase.from("periodos_aquisitivos").insert(novos as any);
+        const { error } = await supabase.from("periodos_aquisitivos").insert(novosValidos as any);
         if (error) {
           toast({ title: "Erro", description: error.message, variant: "destructive" });
         } else {
-          toast({ title: `${novos.length} período(s) gerado(s)!` });
+          toast({ title: `${novosValidos.length} período(s) gerado(s)!` });
           load();
         }
       }
