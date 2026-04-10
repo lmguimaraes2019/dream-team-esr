@@ -219,40 +219,38 @@ export default function ColaboradorDetalhe() {
               </div>
             </div>
           </CardHeader>
-          {showCustos && (
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-                <CustoSection title="Salário"><CustoItem label="Salário Base" value={custo.salario_base} /></CustoSection>
-                <CustoSection title="Encargos">
-                  <CustoItem label="INSS" value={custo.inss} />
-                  <CustoItem label="FGTS" value={custo.fgts} />
-                  <CustoItem label="PIS" value={custo.pis} />
-                </CustoSection>
-                <CustoSection title="Benefícios">
-                  <CustoItem label="VR/VA" value={custo.vr_va} />
-                  <CustoItem label="VT" value={custo.vt} />
-                  <CustoItem label="Plano de Saúde" value={custo.plano_saude} />
-                  <CustoItem label="Seguro" value={custo.seguro} />
-                  <CustoItem label="Internet" value={custo.internet} />
-                </CustoSection>
-                <CustoSection title="Provisões">
-                  <CustoItem label="Férias" value={custo.ferias} />
-                  <CustoItem label="1/3 Férias" value={custo.um_terco_ferias} />
-                  <CustoItem label="13º" value={custo.decimo_terceiro} />
-                </CustoSection>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+              <CustoSection title="Salário"><CustoItem label="Salário Base" value={custo.salario_base} show={showCustos} /></CustoSection>
+              <CustoSection title="Encargos">
+                <CustoItem label="INSS" value={custo.inss} show={showCustos} />
+                <CustoItem label="FGTS" value={custo.fgts} show={showCustos} />
+                <CustoItem label="PIS" value={custo.pis} show={showCustos} />
+              </CustoSection>
+              <CustoSection title="Benefícios">
+                <CustoItem label="VR/VA" value={custo.vr_va} show={showCustos} />
+                <CustoItem label="VT" value={custo.vt} show={showCustos} />
+                <CustoItem label="Plano de Saúde" value={custo.plano_saude} show={showCustos} />
+                <CustoItem label="Seguro" value={custo.seguro} show={showCustos} />
+                <CustoItem label="Internet" value={custo.internet} show={showCustos} />
+              </CustoSection>
+              <CustoSection title="Provisões">
+                <CustoItem label="Férias" value={custo.ferias} show={showCustos} />
+                <CustoItem label="1/3 Férias" value={custo.um_terco_ferias} show={showCustos} />
+                <CustoItem label="13º" value={custo.decimo_terceiro} show={showCustos} />
+              </CustoSection>
+            </div>
+            <div className="mt-6 flex gap-6 border-t pt-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Custo Mensal</p>
+                <p className="text-xl font-bold text-primary">{showCustos ? fmt(custo.custo_mensal) : "••••••"}</p>
               </div>
-              <div className="mt-6 flex gap-6 border-t pt-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Custo Mensal</p>
-                  <p className="text-xl font-bold text-primary">{fmt(custo.custo_mensal)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Custo Anual</p>
-                  <p className="text-xl font-bold">{fmt(custo.custo_anual)}</p>
-                </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Custo Anual</p>
+                <p className="text-xl font-bold">{showCustos ? fmt(custo.custo_anual) : "••••••"}</p>
               </div>
-            </CardContent>
-          )}
+            </div>
+          </CardContent>
         </Card>
       ) : !isTerceirizado ? (
         <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhum custo registrado.</CardContent></Card>
@@ -297,11 +295,11 @@ function CustoSection({ title, children }: { title: string; children: React.Reac
   );
 }
 
-function CustoItem({ label, value }: { label: string; value: number }) {
+function CustoItem({ label, value, show }: { label: string; value: number; show: boolean }) {
   return (
     <div className="flex justify-between text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span>{fmt(value)}</span>
+      <span>{show ? fmt(value) : "••••••"}</span>
     </div>
   );
 }
