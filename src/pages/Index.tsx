@@ -292,7 +292,48 @@ export default function Index() {
         </div>
       )}
 
-      {/* Colaboradores ausentes */}
+      {/* Feedback & 1:1 KPIs */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">1:1 nos últimos 30 dias</CardTitle>
+            <Users2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{pctComOneOnOne}%</p>
+            <p className="text-xs text-muted-foreground">dos colaboradores</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Feedbacks no mês</CardTitle>
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{feedbacksMes}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Ações abertas</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{acoesAbertas}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Conclusão de ações</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{taxaConclusao}%</p>
+          </CardContent>
+        </Card>
+      </div>
+
+
       {ausentes.length > 0 && (
         <Card>
           <CardHeader>
