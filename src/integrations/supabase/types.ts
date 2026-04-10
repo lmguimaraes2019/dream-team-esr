@@ -16,30 +16,48 @@ export type Database = {
     Tables: {
       ausencias: {
         Row: {
+          abono_pecuniario: boolean
           colaborador_id: string
           created_at: string
           data_fim: string
           data_inicio: string
+          decimo_terceiro_antecipado: boolean
+          dias: number | null
+          dias_abono: number | null
           id: string
           observacao: string | null
+          periodo_aquisitivo_fim: string | null
+          periodo_aquisitivo_inicio: string | null
           tipo: Database["public"]["Enums"]["tipo_ausencia"]
         }
         Insert: {
+          abono_pecuniario?: boolean
           colaborador_id: string
           created_at?: string
           data_fim: string
           data_inicio: string
+          decimo_terceiro_antecipado?: boolean
+          dias?: number | null
+          dias_abono?: number | null
           id?: string
           observacao?: string | null
+          periodo_aquisitivo_fim?: string | null
+          periodo_aquisitivo_inicio?: string | null
           tipo: Database["public"]["Enums"]["tipo_ausencia"]
         }
         Update: {
+          abono_pecuniario?: boolean
           colaborador_id?: string
           created_at?: string
           data_fim?: string
           data_inicio?: string
+          decimo_terceiro_antecipado?: boolean
+          dias?: number | null
+          dias_abono?: number | null
           id?: string
           observacao?: string | null
+          periodo_aquisitivo_fim?: string | null
+          periodo_aquisitivo_inicio?: string | null
           tipo?: Database["public"]["Enums"]["tipo_ausencia"]
         }
         Relationships: [
