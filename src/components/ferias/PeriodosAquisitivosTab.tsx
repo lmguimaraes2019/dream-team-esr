@@ -211,6 +211,7 @@ export default function PeriodosAquisitivosTab() {
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("data_limite_concessao")}>
                 <span className="flex items-center">Limite Concessão <SortIcon column="data_limite_concessao" /></span>
               </TableHead>
+              <TableHead>Data Limite</TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("dias_direito")}>
                 <span className="flex items-center">Direito <SortIcon column="dias_direito" /></span>
               </TableHead>
@@ -236,6 +237,7 @@ export default function PeriodosAquisitivosTab() {
                 <TableCell className="text-sm">
                   {format(parseISO(p.data_inicio), "dd/MM/yyyy")} — {format(parseISO(p.data_fim), "dd/MM/yyyy")}
                 </TableCell>
+                <TableCell className="text-sm">{format(parseISO(p.data_limite_concessao), "dd/MM/yyyy")}</TableCell>
                 <TableCell className="text-sm">{format(parseISO(p.data_limite_concessao), "dd/MM/yyyy")}</TableCell>
                 <TableCell>{p.dias_direito}</TableCell>
                 <TableCell>{p.dias_agendados}</TableCell>
@@ -263,7 +265,7 @@ export default function PeriodosAquisitivosTab() {
             ))}
             {sorted.length === 0 && (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 9 : 8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={isAdmin ? 10 : 9} className="text-center py-8 text-muted-foreground">
                   Nenhum período encontrado. Clique em "Gerar Períodos" para criar.
                 </TableCell>
               </TableRow>

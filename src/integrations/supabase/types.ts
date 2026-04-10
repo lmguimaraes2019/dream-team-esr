@@ -257,6 +257,7 @@ export type Database = {
           dias_abono: number
           dias_gozo: number
           id: string
+          numero_programacao: number
           observacao: string | null
           periodo_aquisitivo_id: string
           status: Database["public"]["Enums"]["status_ferias"]
@@ -272,6 +273,7 @@ export type Database = {
           dias_abono?: number
           dias_gozo: number
           id?: string
+          numero_programacao?: number
           observacao?: string | null
           periodo_aquisitivo_id: string
           status?: Database["public"]["Enums"]["status_ferias"]
@@ -287,6 +289,7 @@ export type Database = {
           dias_abono?: number
           dias_gozo?: number
           id?: string
+          numero_programacao?: number
           observacao?: string | null
           periodo_aquisitivo_id?: string
           status?: Database["public"]["Enums"]["status_ferias"]
