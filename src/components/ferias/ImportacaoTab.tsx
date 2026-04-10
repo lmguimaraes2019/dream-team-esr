@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Upload } from "lucide-react";
+import { Upload, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 
 interface ImportRow {
@@ -55,6 +55,28 @@ export default function ImportacaoTab() {
     if (!val) return false;
     const s = String(val).trim().toLowerCase();
     return ["sim", "s", "yes", "y", "true", "1", "x"].includes(s);
+  };
+
+  const downloadTemplate = () => {
+    const headers = [
+      "Nome", "Matrícula", "Período Aquisitivo (início a fim)",
+      "1º Período Início", "1º Período Fim", "1º Período Dias",
+      "2º Período Início", "2º Período Fim", "2º Período Dias",
+      "3º Período Início", "3º Período Fim", "3º Período Dias",
+      "Abono Pecuniário", "Dias de Abono", "13º Antecipado"
+    ];
+    const example = [
+      "João da Silva", "12345", "01/01/2024 a 31/12/2024",
+      "01/02/2025", "20/02/2025", 20,
+      "01/07/2025", "10/07/2025", 10,
+      "", "", "",
+      "Sim", 10, "Não"
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+    ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 2, 18) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Férias");
+    XLSX.writeFile(wb, "modelo_importacao_ferias.xlsx");
   };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -225,18 +247,23 @@ export default function ImportacaoTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <p className="text-sm text-muted-foreground">
+      <div className="flex items-center gap-4 flex-wrap">
+        <p className="text-sm text-muted-foreground flex-1 min-w-[200px]">
           Importe planilhas XLSX/CSV com programação de férias. O sistema identifica colaboradores por nome ou matrícula e cria os registros de férias vinculados aos períodos aquisitivos.
         </p>
-        {isAdmin && (
-          <label>
-            <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFile} />
-            <Button variant="outline" asChild>
-              <span className="cursor-pointer"><Upload className="mr-2 h-4 w-4" />Selecionar Arquivo</span>
-            </Button>
-          </label>
-        )}
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={downloadTemplate}>
+            <Download className="mr-2 h-4 w-4" />Baixar Modelo
+          </Button>
+          {isAdmin && (
+            <label>
+              <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFile} />
+              <Button variant="outline" asChild>
+                <span className="cursor-pointer"><Upload className="mr-2 h-4 w-4" />Selecionar Arquivo</span>
+              </Button>
+            </label>
+          )}
+        </div>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
