@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import TabelaSalarialImport from "@/components/TabelaSalarialImport";
 import OrigensRecursoConfig from "@/components/OrigensRecursoConfig";
+import ImportacaoConfig from "@/components/ImportacaoConfig";
 
 export default function Configuracoes() {
   const [encargos, setEncargos] = useState<any[]>([]);
@@ -206,6 +207,13 @@ export default function Configuracoes() {
         <CardHeader><CardTitle className="text-base">Origens de Recurso</CardTitle></CardHeader>
         <CardContent>
           <OrigensRecursoConfig />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Importação de Planilha</CardTitle></CardHeader>
+        <CardContent>
+          <ImportacaoConfig />
         </CardContent>
       </Card>
 

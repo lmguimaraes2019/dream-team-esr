@@ -9,7 +9,7 @@ import { AppLayout } from "@/components/AppLayout";
 import Index from "./pages/Index";
 import Colaboradores from "./pages/Colaboradores";
 import ColaboradorDetalhe from "./pages/ColaboradorDetalhe";
-import Importacao from "./pages/Importacao";
+
 import Configuracoes from "./pages/Configuracoes";
 import FeriasLicencas from "./pages/FeriasLicencas";
 import FeedbackOneOnOne from "./pages/FeedbackOneOnOne";
@@ -46,7 +46,7 @@ function AppRoutes() {
       <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/colaboradores" element={<ProtectedRoute><Colaboradores /></ProtectedRoute>} />
       <Route path="/colaboradores/:id" element={<ProtectedRoute><ColaboradorDetalhe /></ProtectedRoute>} />
-      <Route path="/importacao" element={<ProtectedRoute><Importacao /></ProtectedRoute>} />
+      
       <Route path="/ferias-licencas" element={<ProtectedRoute><FeriasLicencas /></ProtectedRoute>} />
       <Route path="/feedback-1on1" element={<ProtectedRoute><FeedbackOneOnOne /></ProtectedRoute>} />
       <Route
