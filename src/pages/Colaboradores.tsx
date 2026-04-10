@@ -15,21 +15,13 @@ import { Constants } from "@/integrations/supabase/types";
 import { NIVEL_OPTIONS, nivelLabel } from "@/lib/nivelLabels";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useOrigensRecurso } from "@/hooks/useOrigensRecurso";
-import { AusenciaBadge } from "@/components/AusenciasManager";
 
 type Colaborador = Tables<"colaboradores">;
-
-interface AusenciaAtiva {
-  colaborador_id: string;
-  tipo: string;
-}
-
-type ColabSemFerias = Set<string>;
 
 export default function Colaboradores() {
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [ausenciasAtivas, setAusenciasAtivas] = useState<Record<string, string>>({});
-  const [semFerias, setSemFerias] = useState<ColabSemFerias>(new Set());
+  const [semFerias, setSemFerias] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [filtroGerencia, setFiltroGerencia] = useState("all");
   const [filtroNivel, setFiltroNivel] = useState("all");
@@ -45,28 +37,31 @@ export default function Colaboradores() {
     setColaboradores(data || []);
 
     const today = new Date().toISOString().split("T")[0];
-    const { data: ausencias } = await supabase
-      .from("ausencias")
-      .select("colaborador_id, tipo")
-      .lte("data_inicio", today)
-      .gte("data_fim", today);
+
+    // Active absences from ferias_periodos + licencas
+    const [{ data: feriasAtivas }, { data: licencasAtivas }] = await Promise.all([
+      supabase.from("ferias_periodos").select("colaborador_id").in("status", ["agendada", "concluida"]).lte("data_inicio", today).gte("data_fim", today),
+      supabase.from("licencas").select("colaborador_id, tipo").lte("data_inicio", today).gte("data_fim", today),
+    ]);
+
     const map: Record<string, string> = {};
-    ausencias?.forEach((a) => { map[a.colaborador_id] = a.tipo; });
+    feriasAtivas?.forEach((f) => { map[f.colaborador_id] = "Férias"; });
+    licencasAtivas?.forEach((l) => {
+      if (!map[l.colaborador_id]) {
+        const labels: Record<string, string> = { medica: "Lic. Médica", maternidade: "Lic. Maternidade", outros: "Licença" };
+        map[l.colaborador_id] = labels[l.tipo] || "Licença";
+      }
+    });
     setAusenciasAtivas(map);
 
-    // Check CLT employees without vacation in current year
-    const anoAtual = new Date().getFullYear();
-    const { data: feriasAno } = await supabase
-      .from("ausencias")
+    // CLT employees without scheduled vacation
+    const { data: comFerias } = await supabase
+      .from("ferias_periodos")
       .select("colaborador_id")
-      .eq("tipo", "ferias")
-      .gte("data_inicio", `${anoAtual}-01-01`)
-      .lte("data_inicio", `${anoAtual}-12-31`);
-    const idsComFerias = new Set(feriasAno?.map((f) => f.colaborador_id) || []);
+      .neq("status", "cancelada");
+    const idsComFerias = new Set(comFerias?.map((f) => f.colaborador_id) || []);
     const cltSemFerias = new Set(
-      (data || [])
-        .filter((c) => c.tipo_vinculo === "clt" && !idsComFerias.has(c.id))
-        .map((c) => c.id)
+      (data || []).filter((c) => c.tipo_vinculo === "clt" && !idsComFerias.has(c.id)).map((c) => c.id)
     );
     setSemFerias(cltSemFerias);
   };
@@ -116,9 +111,7 @@ export default function Colaboradores() {
               <Button><Plus className="mr-2 h-4 w-4" />Novo</Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Novo Colaborador</DialogTitle>
-              </DialogHeader>
+              <DialogHeader><DialogTitle>Novo Colaborador</DialogTitle></DialogHeader>
               <form onSubmit={handleCreate} className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Nome *</Label>
@@ -135,8 +128,6 @@ export default function Colaboradores() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* CLT fields */}
                 {!formIsTerceirizado && (
                   <>
                     <div className="space-y-2">
@@ -156,8 +147,6 @@ export default function Colaboradores() {
                     </div>
                   </>
                 )}
-
-                {/* Terceirizado fields */}
                 {formIsTerceirizado && (
                   <>
                     <div className="space-y-2">
@@ -178,7 +167,6 @@ export default function Colaboradores() {
                     </div>
                   </>
                 )}
-
                 <div className="space-y-2">
                   <Label>Gênero</Label>
                   <Select value={form.genero} onValueChange={(v: any) => setForm({ ...form, genero: v })}>
@@ -239,12 +227,7 @@ export default function Colaboradores() {
                   </Select>
                 </div>
                 <div className="flex items-center gap-2 pt-6">
-                  <input
-                    type="checkbox"
-                    checked={form.lideranca || false}
-                    onChange={(e) => setForm({ ...form, lideranca: e.target.checked })}
-                    className="h-4 w-4"
-                  />
+                  <input type="checkbox" checked={form.lideranca || false} onChange={(e) => setForm({ ...form, lideranca: e.target.checked })} className="h-4 w-4" />
                   <Label>Liderança</Label>
                 </div>
                 <div className="sm:col-span-2">
@@ -256,47 +239,34 @@ export default function Colaboradores() {
         )}
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou matrícula..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+          <Input placeholder="Buscar por nome ou matrícula..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
         <Select value={filtroGerencia} onValueChange={setFiltroGerencia}>
           <SelectTrigger className="w-40"><SelectValue placeholder="Gerência" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
-            {gerencias.map((g) => (
-              <SelectItem key={g} value={g}>{g}</SelectItem>
-            ))}
+            {gerencias.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}
           </SelectContent>
         </Select>
         <Select value={filtroNivel} onValueChange={setFiltroNivel}>
           <SelectTrigger className="w-48"><SelectValue placeholder="Nível de Complexidade" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
-            {NIVEL_OPTIONS.map((n) => (
-              <SelectItem key={n.value} value={n.value}>{n.label}</SelectItem>
-            ))}
+            {NIVEL_OPTIONS.map((n) => (<SelectItem key={n.value} value={n.value}>{n.label}</SelectItem>))}
           </SelectContent>
         </Select>
         <Select value={filtroVinculo} onValueChange={setFiltroVinculo}>
           <SelectTrigger className="w-36"><SelectValue placeholder="Vínculo" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
-            {Constants.public.Enums.tipo_vinculo.map((t) => (
-              <SelectItem key={t} value={t}>{t.toUpperCase()}</SelectItem>
-            ))}
+            {Constants.public.Enums.tipo_vinculo.map((t) => (<SelectItem key={t} value={t}>{t.toUpperCase()}</SelectItem>))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Table */}
       <div className="rounded-lg border">
         <Table>
           <TableHeader>
@@ -311,15 +281,13 @@ export default function Colaboradores() {
           </TableHeader>
           <TableBody>
             {filtered.map((c) => (
-              <TableRow
-                key={c.id}
-                className="cursor-pointer"
-                onClick={() => navigate(`/colaboradores/${c.id}`)}
-              >
+              <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/colaboradores/${c.id}`)}>
                 <TableCell className="font-medium">
                   <span className="flex items-center gap-2 flex-wrap">
                     {c.nome}
-                    {ausenciasAtivas[c.id] && <AusenciaBadge tipo={ausenciasAtivas[c.id]} />}
+                    {ausenciasAtivas[c.id] && (
+                      <Badge className="bg-amber-500 text-white border-0 text-xs">{ausenciasAtivas[c.id]}</Badge>
+                    )}
                     {semFerias.has(c.id) && !ausenciasAtivas[c.id] && (
                       <Badge className="bg-destructive text-destructive-foreground border-0 text-xs">Sem férias previstas</Badge>
                     )}
@@ -328,23 +296,13 @@ export default function Colaboradores() {
                 <TableCell>{c.tipo_vinculo === "terceirizado" ? (c as any).empresa_terceirizada || "—" : c.matricula || "—"}</TableCell>
                 <TableCell>{c.gerencia}</TableCell>
                 <TableCell>{c.cargo}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">
-                    {nivelLabel(c.nivel_complexidade)}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={c.tipo_vinculo === "clt" ? "default" : "outline"}>
-                    {c.tipo_vinculo.toUpperCase()}
-                  </Badge>
-                </TableCell>
+                <TableCell><Badge variant="secondary">{nivelLabel(c.nivel_complexidade)}</Badge></TableCell>
+                <TableCell><Badge variant={c.tipo_vinculo === "clt" ? "default" : "outline"}>{c.tipo_vinculo.toUpperCase()}</Badge></TableCell>
               </TableRow>
             ))}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  Nenhum colaborador encontrado.
-                </TableCell>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum colaborador encontrado.</TableCell>
               </TableRow>
             )}
           </TableBody>
