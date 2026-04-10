@@ -90,6 +90,7 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
       updateData.matricula = form.matricula;
       updateData.origem_recurso = (form as any).origem_recurso || null;
     }
+    updateData.gestor_direto = (form as any).gestor_direto || null;
 
     const { error } = await supabase
       .from("colaboradores")
@@ -264,6 +265,10 @@ export default function ColaboradorEditDialog({ colaborador, open, onOpenChange,
                 <SelectItem value="2">2</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Gestor Direto</Label>
+            <Input value={(form as any).gestor_direto || ""} onChange={(e) => setForm({ ...form, gestor_direto: e.target.value } as any)} placeholder="Nome do gestor direto" />
           </div>
           <div className="flex items-center gap-2 pt-6">
             <input type="checkbox" checked={form.lideranca} onChange={(e) => setForm({ ...form, lideranca: e.target.checked })} className="h-4 w-4" />

@@ -8,6 +8,7 @@ import { format, parseISO } from "date-fns";
 import { TIPO_LABELS, TIPO_COLORS, AusenciaBadge } from "@/components/AusenciasManager";
 import { nivelLabel } from "@/lib/nivelLabels";
 import { MaleIcon, FemaleIcon, OtherIcon } from "@/components/GenderIcons";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   PieChart, Pie, Cell, ResponsiveContainer,
@@ -46,6 +47,7 @@ const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function Index() {
+  const { user } = useAuth();
   const [mesRef, setMesRef] = useState("");
   const [meses, setMeses] = useState<string[]>([]);
   const [totalColab, setTotalColab] = useState(0);
@@ -94,27 +96,48 @@ export default function Index() {
       setPeriodosVencendo((data || []).filter((p) => p.status !== "vencido" && p.status !== "concluido" && p.data_limite_concessao <= in60 && p.data_limite_concessao >= today).length);
     });
 
-    // Feedback & 1:1 KPIs
+    // Feedback & 1:1 KPIs — only for direct reports (gestor_direto matches current user)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
     const mesAtual = new Date().toISOString().slice(0, 7);
     const inicioMes = mesAtual + "-01";
 
-    Promise.all([
-      supabase.from("colaboradores").select("id", { count: "exact", head: true }).eq("ativo", true),
-      supabase.from("one_on_one").select("colaborador_id").gte("data", thirtyDaysAgo),
-      supabase.from("feedback").select("id", { count: "exact", head: true }).gte("data", inicioMes),
-      supabase.from("desenvolvimento_acoes").select("status"),
-    ]).then(([colabCount, oooRes, fbCount, acoesRes]) => {
-      const totalColabs = colabCount.count || 0;
+    // Get current user's profile display_name to match gestor_direto
+    const loadKpis = async () => {
+      let displayName = "";
+      if (user) {
+        const { data: profile } = await supabase.from("profiles").select("display_name").eq("user_id", user.id).maybeSingle();
+        displayName = profile?.display_name || "";
+      }
+
+      // Get direct reports (colaboradores where gestor_direto matches)
+      const { data: diretos } = await supabase.from("colaboradores").select("id").eq("ativo", true).eq("gestor_direto", displayName);
+      const diretosIds = (diretos || []).map((d: any) => d.id);
+      const totalDiretos = diretosIds.length;
+
+      if (totalDiretos === 0) {
+        setPctComOneOnOne(0);
+        setFeedbacksMes(0);
+        setAcoesAbertas(0);
+        setTaxaConclusao(0);
+        return;
+      }
+
+      const [oooRes, fbRes, acoesRes] = await Promise.all([
+        supabase.from("one_on_one").select("colaborador_id").gte("data", thirtyDaysAgo).in("colaborador_id", diretosIds),
+        supabase.from("feedback").select("id").gte("data", inicioMes).in("colaborador_id", diretosIds),
+        supabase.from("desenvolvimento_acoes").select("status").in("colaborador_id", diretosIds),
+      ]);
+
       const colabsCom1on1 = new Set((oooRes.data || []).map((o: any) => o.colaborador_id)).size;
-      setPctComOneOnOne(totalColabs > 0 ? Math.round((colabsCom1on1 / totalColabs) * 100) : 0);
-      setFeedbacksMes(fbCount.count || 0);
+      setPctComOneOnOne(totalDiretos > 0 ? Math.round((colabsCom1on1 / totalDiretos) * 100) : 0);
+      setFeedbacksMes((fbRes.data || []).length);
       const allAcoes = acoesRes.data || [];
       const abertas = allAcoes.filter((a: any) => a.status !== "concluido").length;
       const concluidas = allAcoes.filter((a: any) => a.status === "concluido").length;
       setAcoesAbertas(abertas);
       setTaxaConclusao(allAcoes.length > 0 ? Math.round((concluidas / allAcoes.length) * 100) : 0);
-    });
+    };
+    loadKpis();
   }, []);
 
   useEffect(() => {

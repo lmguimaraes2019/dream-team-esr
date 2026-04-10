@@ -84,6 +84,7 @@ export type Database = {
           genero: Database["public"]["Enums"]["genero"]
           gerencia: string
           gestor_contrato: string | null
+          gestor_direto: string | null
           grupo: number
           id: string
           lideranca: boolean
@@ -108,6 +109,7 @@ export type Database = {
           genero: Database["public"]["Enums"]["genero"]
           gerencia: string
           gestor_contrato?: string | null
+          gestor_direto?: string | null
           grupo: number
           id?: string
           lideranca?: boolean
@@ -132,6 +134,7 @@ export type Database = {
           genero?: Database["public"]["Enums"]["genero"]
           gerencia?: string
           gestor_contrato?: string | null
+          gestor_direto?: string | null
           grupo?: number
           id?: string
           lideranca?: boolean

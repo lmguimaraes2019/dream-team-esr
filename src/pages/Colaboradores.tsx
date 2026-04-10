@@ -226,6 +226,10 @@ export default function Colaboradores() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Gestor Direto</Label>
+                  <Input value={form.gestor_direto || ""} onChange={(e) => setForm({ ...form, gestor_direto: e.target.value })} placeholder="Nome do gestor direto" />
+                </div>
                 <div className="flex items-center gap-2 pt-6">
                   <input type="checkbox" checked={form.lideranca || false} onChange={(e) => setForm({ ...form, lideranca: e.target.checked })} className="h-4 w-4" />
                   <Label>Liderança</Label>
