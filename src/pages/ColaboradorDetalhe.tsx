@@ -230,7 +230,7 @@ export default function ColaboradorDetalhe() {
               <CustoSection title="Benefícios">
                 <CustoItem label="VR/VA" value={custo.vr_va} show={showCustos} />
                 <CustoItem label="VT" value={custo.vt} show={showCustos} />
-                <CustoItem label="Plano de Saúde" value={custo.plano_saude} show={showCustos} />
+                <CustoItem label="Pl. Saúde e Odont." value={custo.plano_saude} show={showCustos} />
                 <CustoItem label="Seguro" value={custo.seguro} show={showCustos} />
                 <CustoItem label="Internet" value={custo.internet} show={showCustos} />
               </CustoSection>

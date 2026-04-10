@@ -75,6 +75,6 @@ export function buildParametros(rows: { nome: string; taxa: number; tipo: string
     seguro_taxa: Number(get("Seguro Vida")?.taxa ?? 0.005811),
     internet_valor: Number(get("Internet")?.taxa ?? 100),
     vt_valor: Number(get("VT")?.taxa ?? 0),
-    plano_saude_valor: Number(get("Plano Saúde")?.taxa ?? 0),
+    plano_saude_valor: Number(get("Pl. Saúde e Odont.")?.taxa ?? 0),
   };
 }
