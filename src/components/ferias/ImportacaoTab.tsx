@@ -225,18 +225,23 @@ export default function ImportacaoTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <p className="text-sm text-muted-foreground">
+      <div className="flex items-center gap-4 flex-wrap">
+        <p className="text-sm text-muted-foreground flex-1 min-w-[200px]">
           Importe planilhas XLSX/CSV com programação de férias. O sistema identifica colaboradores por nome ou matrícula e cria os registros de férias vinculados aos períodos aquisitivos.
         </p>
-        {isAdmin && (
-          <label>
-            <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFile} />
-            <Button variant="outline" asChild>
-              <span className="cursor-pointer"><Upload className="mr-2 h-4 w-4" />Selecionar Arquivo</span>
-            </Button>
-          </label>
-        )}
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={downloadTemplate}>
+            <Download className="mr-2 h-4 w-4" />Baixar Modelo
+          </Button>
+          {isAdmin && (
+            <label>
+              <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFile} />
+              <Button variant="outline" asChild>
+                <span className="cursor-pointer"><Upload className="mr-2 h-4 w-4" />Selecionar Arquivo</span>
+              </Button>
+            </label>
+          )}
+        </div>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
