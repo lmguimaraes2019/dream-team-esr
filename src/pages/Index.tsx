@@ -329,7 +329,7 @@ export default function Index() {
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={salarioGeneroLider} className="text-xs">
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="grupo" tick={{ fontSize: 11 }} />
+                    <XAxis dataKey="grupo" tick={{ fontSize: 11 }} tickLine={false} />
                     <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                     <Tooltip formatter={(v: number) => fmt(v)} />
                     <Legend />
