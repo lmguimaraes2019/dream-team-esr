@@ -57,7 +57,29 @@ export default function ImportacaoTab() {
     return ["sim", "s", "yes", "y", "true", "1", "x"].includes(s);
   };
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const downloadTemplate = () => {
+    const headers = [
+      "Nome", "Matrícula", "Período Aquisitivo (início a fim)",
+      "1º Período Início", "1º Período Fim", "1º Período Dias",
+      "2º Período Início", "2º Período Fim", "2º Período Dias",
+      "3º Período Início", "3º Período Fim", "3º Período Dias",
+      "Abono Pecuniário", "Dias de Abono", "13º Antecipado"
+    ];
+    const example = [
+      "João da Silva", "12345", "01/01/2024 a 31/12/2024",
+      "01/02/2025", "20/02/2025", 20,
+      "01/07/2025", "10/07/2025", 10,
+      "", "", "",
+      "Sim", 10, "Não"
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+    ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 2, 18) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Férias");
+    XLSX.writeFile(wb, "modelo_importacao_ferias.xlsx");
+  };
+
+
     const file = e.target.files?.[0];
     if (!file) return;
     const ab = await file.arrayBuffer();
