@@ -24,9 +24,12 @@ interface AusenciaAtiva {
   tipo: string;
 }
 
+type ColabSemFerias = Set<string>;
+
 export default function Colaboradores() {
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [ausenciasAtivas, setAusenciasAtivas] = useState<Record<string, string>>({});
+  const [semFerias, setSemFerias] = useState<ColabSemFerias>(new Set());
   const [search, setSearch] = useState("");
   const [filtroGerencia, setFiltroGerencia] = useState("all");
   const [filtroNivel, setFiltroNivel] = useState("all");
@@ -50,6 +53,22 @@ export default function Colaboradores() {
     const map: Record<string, string> = {};
     ausencias?.forEach((a) => { map[a.colaborador_id] = a.tipo; });
     setAusenciasAtivas(map);
+
+    // Check CLT employees without vacation in current year
+    const anoAtual = new Date().getFullYear();
+    const { data: feriasAno } = await supabase
+      .from("ausencias")
+      .select("colaborador_id")
+      .eq("tipo", "ferias")
+      .gte("data_inicio", `${anoAtual}-01-01`)
+      .lte("data_inicio", `${anoAtual}-12-31`);
+    const idsComFerias = new Set(feriasAno?.map((f) => f.colaborador_id) || []);
+    const cltSemFerias = new Set(
+      (data || [])
+        .filter((c) => c.tipo_vinculo === "clt" && !idsComFerias.has(c.id))
+        .map((c) => c.id)
+    );
+    setSemFerias(cltSemFerias);
   };
 
   useEffect(() => { load(); }, []);
@@ -298,9 +317,12 @@ export default function Colaboradores() {
                 onClick={() => navigate(`/colaboradores/${c.id}`)}
               >
                 <TableCell className="font-medium">
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 flex-wrap">
                     {c.nome}
                     {ausenciasAtivas[c.id] && <AusenciaBadge tipo={ausenciasAtivas[c.id]} />}
+                    {semFerias.has(c.id) && !ausenciasAtivas[c.id] && (
+                      <Badge className="bg-destructive text-destructive-foreground border-0 text-xs">Sem férias previstas</Badge>
+                    )}
                   </span>
                 </TableCell>
                 <TableCell>{c.tipo_vinculo === "terceirizado" ? (c as any).empresa_terceirizada || "—" : c.matricula || "—"}</TableCell>
