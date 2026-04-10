@@ -24,12 +24,14 @@ export function gerarPeriodosAquisitivos(
   const periodos: PeriodoAquisitivo[] = [];
 
   let inicio = admissao;
-  // Generate periods up to today + 12 months ahead
-  // Gerar apenas períodos que iniciam até 31/12 do ano corrente
-  const limite = new Date(hoje.getFullYear(), 11, 31);
 
-  while (isBefore(inicio, limite)) {
+  // Gerar períodos cujo data_fim seja até hoje (não gerar períodos futuros)
+  while (true) {
     const fim = addDays(addMonths(inicio, 12), -1);
+
+    // Parar se a data final do período for depois de hoje
+    if (isAfter(fim, hoje)) break;
+
     const limiteConcessao = addDays(addMonths(fim, 11), 0);
 
     // Only include periods that start on or after cutoff
