@@ -25,7 +25,8 @@ export function gerarPeriodosAquisitivos(
 
   let inicio = admissao;
   // Generate periods up to today + 12 months ahead
-  const limite = addMonths(hoje, 12);
+  // Gerar apenas períodos que iniciam até 31/12 do ano corrente
+  const limite = new Date(hoje.getFullYear(), 11, 31);
 
   while (isBefore(inicio, limite)) {
     const fim = addDays(addMonths(inicio, 12), -1);
