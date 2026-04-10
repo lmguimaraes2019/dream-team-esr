@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 const TIPO_LABELS: Record<string, string> = {
@@ -33,6 +33,9 @@ const emptyForm = {
   observacao: "",
 };
 
+type SortKey = "nome" | "tipo" | "data_inicio" | "data_fim" | "observacao";
+type SortDir = "asc" | "desc";
+
 export default function LicencasTab() {
   const [licencas, setLicencas] = useState<any[]>([]);
   const [colaboradores, setColaboradores] = useState<any[]>([]);
@@ -41,6 +44,8 @@ export default function LicencasTab() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("nome");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const { isAdmin } = useAuth();
   const { toast } = useToast();
 
@@ -59,11 +64,41 @@ export default function LicencasTab() {
 
   useEffect(() => { load(); loadColabs(); }, []);
 
-  const filtered = licencas.filter((l) => {
-    if (!search) return true;
-    const nome = (l.colaboradores as any)?.nome?.toLowerCase() || "";
-    return nome.includes(search.toLowerCase());
-  });
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const SortIcon = ({ column }: { column: SortKey }) => {
+    if (sortKey !== column) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
+  };
+
+  const sorted = useMemo(() => {
+    const filtered = licencas.filter((l) => {
+      if (!search) return true;
+      const nome = (l.colaboradores as any)?.nome?.toLowerCase() || "";
+      return nome.includes(search.toLowerCase());
+    });
+
+    return [...filtered].sort((a, b) => {
+      let va: any, vb: any;
+      if (sortKey === "nome") {
+        va = (a.colaboradores as any)?.nome?.toLowerCase() || "";
+        vb = (b.colaboradores as any)?.nome?.toLowerCase() || "";
+      } else {
+        va = a[sortKey] || "";
+        vb = b[sortKey] || "";
+      }
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [licencas, search, sortKey, sortDir]);
 
   const openCreate = () => { setEditId(null); setForm(emptyForm); setDialogOpen(true); };
   const openEdit = (l: any) => {
@@ -127,16 +162,24 @@ export default function LicencasTab() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Colaborador</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Início</TableHead>
-              <TableHead>Fim</TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("nome")}>
+                <span className="flex items-center">Colaborador <SortIcon column="nome" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("tipo")}>
+                <span className="flex items-center">Tipo <SortIcon column="tipo" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("data_inicio")}>
+                <span className="flex items-center">Início <SortIcon column="data_inicio" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("data_fim")}>
+                <span className="flex items-center">Fim <SortIcon column="data_fim" /></span>
+              </TableHead>
               <TableHead>Observação</TableHead>
               {isAdmin && <TableHead className="w-20">Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((l) => (
+            {sorted.map((l) => (
               <TableRow key={l.id}>
                 <TableCell className="font-medium">{(l.colaboradores as any)?.nome || "—"}</TableCell>
                 <TableCell>
@@ -173,7 +216,7 @@ export default function LicencasTab() {
                 )}
               </TableRow>
             ))}
-            {filtered.length === 0 && (
+            {sorted.length === 0 && (
               <TableRow>
                 <TableCell colSpan={isAdmin ? 6 : 5} className="text-center py-8 text-muted-foreground">
                   Nenhuma licença encontrada.

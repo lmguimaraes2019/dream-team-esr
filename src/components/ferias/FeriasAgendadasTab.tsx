@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { validarFerias, calcularSaldo } from "@/lib/feriasLogic";
 
@@ -34,6 +34,9 @@ const emptyForm = {
   observacao: "",
 };
 
+type SortKey = "nome" | "data_inicio" | "data_fim" | "dias_gozo" | "abono" | "decimo_terceiro" | "status";
+type SortDir = "asc" | "desc";
+
 export default function FeriasAgendadasTab() {
   const [ferias, setFerias] = useState<any[]>([]);
   const [colaboradores, setColaboradores] = useState<any[]>([]);
@@ -44,6 +47,8 @@ export default function FeriasAgendadasTab() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [saldoInfo, setSaldoInfo] = useState<number | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("nome");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const { isAdmin } = useAuth();
   const { toast } = useToast();
 
@@ -62,7 +67,6 @@ export default function FeriasAgendadasTab() {
 
   useEffect(() => { load(); loadColabs(); }, []);
 
-  // Load eligible periods when colaborador changes
   useEffect(() => {
     if (!form.colaborador_id) { setPeriodos([]); setSaldoInfo(null); return; }
     supabase
@@ -75,17 +79,56 @@ export default function FeriasAgendadasTab() {
       .then(({ data }) => setPeriodos(data || []));
   }, [form.colaborador_id]);
 
-  // Update saldo when period changes
   useEffect(() => {
     const p = periodos.find((p) => p.id === form.periodo_aquisitivo_id);
     setSaldoInfo(p ? p.saldo_disponivel : null);
   }, [form.periodo_aquisitivo_id, periodos]);
 
-  const filtered = ferias.filter((f) => {
-    if (!search) return true;
-    const nome = (f.colaboradores as any)?.nome?.toLowerCase() || "";
-    return nome.includes(search.toLowerCase());
-  });
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const SortIcon = ({ column }: { column: SortKey }) => {
+    if (sortKey !== column) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
+  };
+
+  const sorted = useMemo(() => {
+    const filtered = ferias.filter((f) => {
+      if (!search) return true;
+      const nome = (f.colaboradores as any)?.nome?.toLowerCase() || "";
+      return nome.includes(search.toLowerCase());
+    });
+
+    return [...filtered].sort((a, b) => {
+      let va: any, vb: any;
+      switch (sortKey) {
+        case "nome":
+          va = (a.colaboradores as any)?.nome?.toLowerCase() || "";
+          vb = (b.colaboradores as any)?.nome?.toLowerCase() || "";
+          break;
+        case "abono":
+          va = a.abono_pecuniario ? 1 : 0;
+          vb = b.abono_pecuniario ? 1 : 0;
+          break;
+        case "decimo_terceiro":
+          va = a.decimo_terceiro_antecipado ? 1 : 0;
+          vb = b.decimo_terceiro_antecipado ? 1 : 0;
+          break;
+        default:
+          va = a[sortKey];
+          vb = b[sortKey];
+      }
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [ferias, search, sortKey, sortDir]);
 
   const openCreate = () => { setEditId(null); setForm(emptyForm); setDialogOpen(true); };
 
@@ -111,7 +154,6 @@ export default function FeriasAgendadasTab() {
     const diasGozo = Number(form.dias_gozo) || 0;
     const diasAbono = form.abono_pecuniario ? (Number(form.dias_abono) || 0) : 0;
 
-    // Get existing ferias for overlap check
     const { data: existentes } = await supabase
       .from("ferias_periodos")
       .select("id, data_inicio, data_fim")
@@ -154,7 +196,6 @@ export default function FeriasAgendadasTab() {
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      // Recalculate period balance
       await recalcularSaldoPeriodo(form.periodo_aquisitivo_id);
       toast({ title: editId ? "Férias atualizadas!" : "Férias agendadas!" });
       setDialogOpen(false);
@@ -213,19 +254,33 @@ export default function FeriasAgendadasTab() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Colaborador</TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("nome")}>
+                <span className="flex items-center">Colaborador <SortIcon column="nome" /></span>
+              </TableHead>
               <TableHead>Per. Aquisitivo</TableHead>
-              <TableHead>Início</TableHead>
-              <TableHead>Fim</TableHead>
-              <TableHead>Dias</TableHead>
-              <TableHead>Abono</TableHead>
-              <TableHead>13º</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("data_inicio")}>
+                <span className="flex items-center">Início <SortIcon column="data_inicio" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("data_fim")}>
+                <span className="flex items-center">Fim <SortIcon column="data_fim" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("dias_gozo")}>
+                <span className="flex items-center">Dias <SortIcon column="dias_gozo" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("abono")}>
+                <span className="flex items-center">Abono <SortIcon column="abono" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("decimo_terceiro")}>
+                <span className="flex items-center">13º <SortIcon column="decimo_terceiro" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("status")}>
+                <span className="flex items-center">Status <SortIcon column="status" /></span>
+              </TableHead>
               {isAdmin && <TableHead className="w-20">Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((f) => (
+            {sorted.map((f) => (
               <TableRow key={f.id}>
                 <TableCell className="font-medium">{(f.colaboradores as any)?.nome || "—"}</TableCell>
                 <TableCell className="text-xs">
@@ -269,7 +324,7 @@ export default function FeriasAgendadasTab() {
                 )}
               </TableRow>
             ))}
-            {filtered.length === 0 && (
+            {sorted.length === 0 && (
               <TableRow>
                 <TableCell colSpan={isAdmin ? 9 : 8} className="text-center py-8 text-muted-foreground">
                   Nenhuma férias agendada.
@@ -280,7 +335,6 @@ export default function FeriasAgendadasTab() {
         </Table>
       </div>
 
-      {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { RefreshCw, Search, Ban, RotateCcw } from "lucide-react";
+import { RefreshCw, Search, Ban, RotateCcw, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { gerarPeriodosAquisitivos } from "@/lib/feriasLogic";
 
@@ -28,12 +28,17 @@ const STATUS_LABELS: Record<string, string> = {
   desconsiderado: "Desconsiderado",
 };
 
+type SortKey = "nome" | "data_inicio" | "data_limite_concessao" | "dias_direito" | "dias_agendados" | "dias_abono" | "saldo_disponivel" | "status";
+type SortDir = "asc" | "desc";
+
 export default function PeriodosAquisitivosTab() {
   const [periodos, setPeriodos] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [generating, setGenerating] = useState(false);
   const [desconsiderarDialog, setDesconsiderarDialog] = useState<string | null>(null);
   const [motivo, setMotivo] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("nome");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const { isAdmin } = useAuth();
   const { toast } = useToast();
 
@@ -47,16 +52,45 @@ export default function PeriodosAquisitivosTab() {
 
   useEffect(() => { load(); }, []);
 
-  const filtered = periodos.filter((p) => {
-    if (!search) return true;
-    const nome = (p.colaboradores as any)?.nome?.toLowerCase() || "";
-    return nome.includes(search.toLowerCase());
-  });
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const SortIcon = ({ column }: { column: SortKey }) => {
+    if (sortKey !== column) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
+  };
+
+  const sorted = useMemo(() => {
+    const filtered = periodos.filter((p) => {
+      if (!search) return true;
+      const nome = (p.colaboradores as any)?.nome?.toLowerCase() || "";
+      return nome.includes(search.toLowerCase());
+    });
+
+    return [...filtered].sort((a, b) => {
+      let va: any, vb: any;
+      if (sortKey === "nome") {
+        va = (a.colaboradores as any)?.nome?.toLowerCase() || "";
+        vb = (b.colaboradores as any)?.nome?.toLowerCase() || "";
+      } else {
+        va = a[sortKey];
+        vb = b[sortKey];
+      }
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [periodos, search, sortKey, sortDir]);
 
   const handleGerarPeriodos = async () => {
     setGenerating(true);
     try {
-      // Get cutoff date
       const { data: configData } = await supabase
         .from("configuracoes_encargos")
         .select("data_vigencia")
@@ -64,7 +98,6 @@ export default function PeriodosAquisitivosTab() {
         .single();
       const dataCorte = configData?.data_vigencia || "2024-01-01";
 
-      // Get all active CLT employees
       const { data: colabs } = await supabase
         .from("colaboradores")
         .select("id, data_admissao")
@@ -77,7 +110,6 @@ export default function PeriodosAquisitivosTab() {
         return;
       }
 
-      // Get existing periods to avoid duplicates
       const { data: existentes } = await supabase
         .from("periodos_aquisitivos")
         .select("colaborador_id, data_inicio");
@@ -170,19 +202,35 @@ export default function PeriodosAquisitivosTab() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Colaborador</TableHead>
-              <TableHead>Período Aquisitivo</TableHead>
-              <TableHead>Limite Concessão</TableHead>
-              <TableHead>Direito</TableHead>
-              <TableHead>Agendados</TableHead>
-              <TableHead>Abono</TableHead>
-              <TableHead>Saldo</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("nome")}>
+                <span className="flex items-center">Colaborador <SortIcon column="nome" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("data_inicio")}>
+                <span className="flex items-center">Período Aquisitivo <SortIcon column="data_inicio" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("data_limite_concessao")}>
+                <span className="flex items-center">Limite Concessão <SortIcon column="data_limite_concessao" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("dias_direito")}>
+                <span className="flex items-center">Direito <SortIcon column="dias_direito" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("dias_agendados")}>
+                <span className="flex items-center">Agendados <SortIcon column="dias_agendados" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("dias_abono")}>
+                <span className="flex items-center">Abono <SortIcon column="dias_abono" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("saldo_disponivel")}>
+                <span className="flex items-center">Saldo <SortIcon column="saldo_disponivel" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("status")}>
+                <span className="flex items-center">Status <SortIcon column="status" /></span>
+              </TableHead>
               {isAdmin && <TableHead className="w-24">Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((p) => (
+            {sorted.map((p) => (
               <TableRow key={p.id} className={p.desconsiderar_periodo ? "opacity-60" : ""}>
                 <TableCell className="font-medium">{(p.colaboradores as any)?.nome || "—"}</TableCell>
                 <TableCell className="text-sm">
@@ -213,7 +261,7 @@ export default function PeriodosAquisitivosTab() {
                 )}
               </TableRow>
             ))}
-            {filtered.length === 0 && (
+            {sorted.length === 0 && (
               <TableRow>
                 <TableCell colSpan={isAdmin ? 9 : 8} className="text-center py-8 text-muted-foreground">
                   Nenhum período encontrado. Clique em "Gerar Períodos" para criar.
