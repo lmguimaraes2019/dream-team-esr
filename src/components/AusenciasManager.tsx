@@ -22,13 +22,13 @@ interface Ausencia {
   created_at: string;
 }
 
-const TIPO_LABELS: Record<string, string> = {
+export const TIPO_LABELS: Record<string, string> = {
   ferias: "Férias",
   licenca_medica: "Licença Médica",
   licenca_maternidade: "Licença Maternidade",
 };
 
-const TIPO_COLORS: Record<string, string> = {
+export const TIPO_COLORS: Record<string, string> = {
   ferias: "bg-amber-500 text-white hover:bg-amber-500/80",
   licenca_medica: "bg-red-500 text-white hover:bg-red-500/80",
   licenca_maternidade: "bg-purple-500 text-white hover:bg-purple-500/80",

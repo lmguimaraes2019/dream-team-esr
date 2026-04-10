@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Upload, Settings } from "lucide-react";
+import { LayoutDashboard, Users, Upload, Settings, CalendarDays } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +24,7 @@ export function AppSidebar() {
     { title: "Dashboard", url: "/", icon: LayoutDashboard },
     { title: "Colaboradores", url: "/colaboradores", icon: Users },
     { title: "Importação", url: "/importacao", icon: Upload },
+    { title: "Férias e Licenças", url: "/ferias-licencas", icon: CalendarDays },
   ];
 
   if (isAdmin) {
