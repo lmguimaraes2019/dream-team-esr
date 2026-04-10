@@ -14,9 +14,11 @@ interface ImportRow {
   matricula?: string;
   periodo_aquisitivo_inicio?: string;
   periodo_aquisitivo_fim?: string;
+  data_limite_concessao?: string;
   data_inicio: string;
   data_fim: string;
   dias?: number;
+  numero_programacao?: number;
   abono_pecuniario?: boolean;
   dias_abono?: number;
   decimo_terceiro_antecipado?: boolean;
@@ -57,20 +59,34 @@ export default function ImportacaoTab() {
     return ["sim", "s", "yes", "y", "true", "1", "x"].includes(s);
   };
 
+  const parseNumeroProgramacao = (val: any): number => {
+    if (!val) return 1;
+    const s = String(val).trim().toLowerCase();
+    const match = s.match(/^(\d)/);
+    if (match) return Math.min(3, Math.max(1, Number(match[1])));
+    return 1;
+  };
+
   const downloadTemplate = () => {
     const headers = [
-      "Nome", "Matrícula", "Período Aquisitivo (início a fim)",
-      "1º Período Início", "1º Período Fim", "1º Período Dias",
-      "2º Período Início", "2º Período Fim", "2º Período Dias",
-      "3º Período Início", "3º Período Fim", "3º Período Dias",
-      "Abono Pecuniário", "Dias de Abono", "13º Antecipado"
+      "Filial", "Centro Custo", "Diretoria", "Diretoria Adj", "Gerencia", "Gestor",
+      "Matricula", "Nome",
+      "Período Aquisitivo De", "Período Aquisitivo Até",
+      "Data Limite Maxima Para Inicio das Férias",
+      "Qtd Dias de Férias Pendentes", "Qtd Dias de Férias",
+      "Número Prog. de Férias",
+      "Programação Data Início", "Programação Data Final",
+      "Abono", "Antecip da 1ª Parc. 13º Sal."
     ];
     const example = [
-      "João da Silva", "12345", "01/01/2024 a 31/12/2024",
-      "01/02/2025", "20/02/2025", 20,
-      "01/07/2025", "10/07/2025", 10,
-      "", "", "",
-      "Sim", 10, "Não"
+      "01", "0020000001063", "DSS", "ESR", "GADM", "Luciana Batista da Silva",
+      "000420", "ALESSANDRA B DE SOUZA LIMA",
+      "12/09/2024", "11/09/2025",
+      "12/08/2026",
+      10, 20,
+      "1a",
+      "29/09/2025", "18/10/2025",
+      "D.AB.", "13o S  50.0"
     ];
     const ws = XLSX.utils.aoa_to_sheet([headers, example]);
     ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 2, 18) }));
@@ -95,18 +111,35 @@ export default function ImportacaoTab() {
     const headers = Object.keys(raw[0]);
     const colNome = findCol(headers, ["nome", "colaborador"]);
     const colMat = findCol(headers, ["matrícula", "matricula"]);
-    const colPAInicio = findCol(headers, ["período aquisitivo", "per. aquisitivo", "aquisitivo"]);
+    const colPADe = findCol(headers, ["período aquisitivo de", "periodo aquisitivo de", "aquisitivo de"]);
+    const colPAAte = findCol(headers, ["período aquisitivo até", "periodo aquisitivo ate", "aquisitivo até"]);
+    const colPACombined = !colPADe ? findCol(headers, ["período aquisitivo", "per. aquisitivo", "aquisitivo"]) : undefined;
+    const colDataLimite = findCol(headers, ["data limite", "limite maxima", "limite máxima"]);
     const colAbono = findCol(headers, ["abono"]);
-    const colDiasAbono = findCol(headers, ["dias abono", "dias de abono"]);
-    const col13 = findCol(headers, ["13", "décimo", "decimo"]);
+    const col13 = findCol(headers, ["13", "décimo", "decimo", "antecip"]);
+    const colNumProg = findCol(headers, ["número prog", "numero prog", "nº prog"]);
 
-    const periodCols: { inicio: string; fim: string; dias?: string }[] = [];
-    for (let i = 1; i <= 3; i++) {
-      const prefix = `${i}º`;
-      const inicioCol = headers.find((h) => h.includes(prefix) && (h.toLowerCase().includes("início") || h.toLowerCase().includes("inicio")));
-      const fimCol = headers.find((h) => h.includes(prefix) && h.toLowerCase().includes("fim"));
-      const diasCol = headers.find((h) => h.includes(prefix) && h.toLowerCase().includes("dia"));
-      if (inicioCol && fimCol) periodCols.push({ inicio: inicioCol, fim: fimCol, dias: diasCol });
+    // RNP format: "Programação Data Início" / "Programação Data Final"
+    const colProgInicio = findCol(headers, ["programação data início", "programação data inicio", "programacao data inicio"]);
+    const colProgFim = findCol(headers, ["programação data final", "programacao data final", "programação data fim"]);
+    const colDiasFeriasPendentes = findCol(headers, ["dias de férias pendentes", "dias de ferias pendentes"]);
+    const colDiasFeriasQtd = findCol(headers, ["qtd dias de férias", "qtd dias de ferias"]);
+
+    // Try period columns (1º, 2º, 3º format)
+    const periodCols: { inicio: string; fim: string; dias?: string; prog?: number }[] = [];
+
+    if (colProgInicio && colProgFim) {
+      // RNP single-row format
+      const diasCol = colDiasFeriasQtd || findCol(headers, ["dias"]);
+      periodCols.push({ inicio: colProgInicio, fim: colProgFim, dias: diasCol || undefined, prog: undefined });
+    } else {
+      for (let i = 1; i <= 3; i++) {
+        const prefix = `${i}º`;
+        const inicioCol = headers.find((h) => h.includes(prefix) && (h.toLowerCase().includes("início") || h.toLowerCase().includes("inicio")));
+        const fimCol = headers.find((h) => h.includes(prefix) && h.toLowerCase().includes("fim"));
+        const diasCol = headers.find((h) => h.includes(prefix) && h.toLowerCase().includes("dia"));
+        if (inicioCol && fimCol) periodCols.push({ inicio: inicioCol, fim: fimCol, dias: diasCol, prog: i });
+      }
     }
 
     if (periodCols.length === 0) {
@@ -129,15 +162,38 @@ export default function ImportacaoTab() {
       return null;
     };
 
+    const parseAbonoField = (val: any): boolean => {
+      if (!val) return false;
+      const s = String(val).trim().toUpperCase();
+      return s.includes("D.AB") || s.includes("D.FER") || parseBool(val);
+    };
+
+    const parse13Field = (val: any): boolean => {
+      if (!val) return false;
+      const s = String(val).trim().toLowerCase();
+      return s.includes("13o") || s.includes("13º") || parseBool(val);
+    };
+
     const rows: ImportRow[] = [];
     for (const row of raw) {
       const nome = String(row[colNome!] || "").trim();
       if (!nome) continue;
       const matricula = colMat ? String(row[colMat] || "").trim() : undefined;
-      const pa = colPAInicio ? parsePeriodoAquisitivo(row[colPAInicio]) : null;
-      const abono = colAbono ? parseBool(row[colAbono]) : false;
-      const diasAbono = colDiasAbono ? (Number(row[colDiasAbono]) || undefined) : undefined;
-      const dec13 = col13 ? parseBool(row[col13]) : false;
+
+      let paInicio: string | undefined;
+      let paFim: string | undefined;
+      if (colPADe && colPAAte) {
+        paInicio = parseExcelDate(row[colPADe]);
+        paFim = parseExcelDate(row[colPAAte]);
+      } else if (colPACombined) {
+        const pa = parsePeriodoAquisitivo(row[colPACombined]);
+        if (pa) { paInicio = pa.inicio; paFim = pa.fim; }
+      }
+
+      const dataLimite = colDataLimite ? parseExcelDate(row[colDataLimite]) : undefined;
+      const abono = colAbono ? parseAbonoField(row[colAbono]) : false;
+      const dec13 = col13 ? parse13Field(row[col13]) : false;
+      const numProg = colNumProg ? parseNumeroProgramacao(row[colNumProg]) : undefined;
 
       for (const pc of periodCols) {
         const inicio = parseExcelDate(row[pc.inicio]);
@@ -150,10 +206,13 @@ export default function ImportacaoTab() {
         });
         rows.push({
           nome, matricula,
-          periodo_aquisitivo_inicio: pa?.inicio,
-          periodo_aquisitivo_fim: pa?.fim,
+          periodo_aquisitivo_inicio: paInicio,
+          periodo_aquisitivo_fim: paFim,
+          data_limite_concessao: dataLimite,
           data_inicio: inicio, data_fim: fim, dias,
-          abono_pecuniario: abono, dias_abono: diasAbono,
+          numero_programacao: numProg || pc.prog || 1,
+          abono_pecuniario: abono,
+          dias_abono: abono ? 10 : undefined,
           decimo_terceiro_antecipado: dec13,
           matched: !!matched, colaborador_id: matched?.id,
         });
@@ -177,10 +236,8 @@ export default function ImportacaoTab() {
       return;
     }
 
-    // For each matched row, find or create periodo aquisitivo, then insert ferias
     let inserted = 0;
     for (const r of matched) {
-      // Try to find existing periodo aquisitivo
       let periodoId: string | null = null;
       if (r.periodo_aquisitivo_inicio && r.periodo_aquisitivo_fim) {
         const { data: existingP } = await supabase
@@ -192,14 +249,14 @@ export default function ImportacaoTab() {
         if (existingP) {
           periodoId = existingP.id;
         } else {
-          // Create periodo
+          const limiteConcessao = r.data_limite_concessao || r.periodo_aquisitivo_fim;
           const { data: newP } = await supabase
             .from("periodos_aquisitivos")
             .insert({
               colaborador_id: r.colaborador_id!,
               data_inicio: r.periodo_aquisitivo_inicio,
               data_fim: r.periodo_aquisitivo_fim,
-              data_limite_concessao: r.periodo_aquisitivo_fim, // simplified
+              data_limite_concessao: limiteConcessao,
             } as any)
             .select("id")
             .single();
@@ -208,7 +265,6 @@ export default function ImportacaoTab() {
       }
 
       if (!periodoId) {
-        // Find any open period for the employee
         const { data: openP } = await supabase
           .from("periodos_aquisitivos")
           .select("id")
@@ -220,7 +276,7 @@ export default function ImportacaoTab() {
         periodoId = openP?.id || null;
       }
 
-      if (!periodoId) continue; // Skip if no period available
+      if (!periodoId) continue;
 
       const { error } = await supabase.from("ferias_periodos").insert({
         colaborador_id: r.colaborador_id!,
@@ -228,6 +284,7 @@ export default function ImportacaoTab() {
         data_inicio: r.data_inicio,
         data_fim: r.data_fim,
         dias_gozo: r.dias || 30,
+        numero_programacao: r.numero_programacao || 1,
         abono_pecuniario: r.abono_pecuniario ?? false,
         dias_abono: r.dias_abono ?? 0,
         decimo_terceiro_antecipado: r.decimo_terceiro_antecipado ?? false,
@@ -267,7 +324,7 @@ export default function ImportacaoTab() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Preview da Importação</DialogTitle></DialogHeader>
           {importPreview && (
             <>
@@ -280,6 +337,9 @@ export default function ImportacaoTab() {
                     <TableRow>
                       <TableHead>Status</TableHead>
                       <TableHead>Nome</TableHead>
+                      <TableHead>Per. Aquisitivo</TableHead>
+                      <TableHead>Data Limite</TableHead>
+                      <TableHead>Nº Prog.</TableHead>
                       <TableHead>Início</TableHead>
                       <TableHead>Fim</TableHead>
                       <TableHead>Dias</TableHead>
@@ -296,6 +356,13 @@ export default function ImportacaoTab() {
                           </Badge>
                         </TableCell>
                         <TableCell className="font-medium">{r.nome}</TableCell>
+                        <TableCell className="text-xs">
+                          {r.periodo_aquisitivo_inicio && r.periodo_aquisitivo_fim
+                            ? `${r.periodo_aquisitivo_inicio} — ${r.periodo_aquisitivo_fim}`
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="text-xs">{r.data_limite_concessao || "—"}</TableCell>
+                        <TableCell className="text-center">{r.numero_programacao || 1}ª</TableCell>
                         <TableCell>{r.data_inicio}</TableCell>
                         <TableCell>{r.data_fim}</TableCell>
                         <TableCell>{r.dias ?? "—"}</TableCell>

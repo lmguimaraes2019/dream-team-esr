@@ -32,9 +32,10 @@ const emptyForm = {
   decimo_terceiro_antecipado: false,
   status: "agendada" as string,
   observacao: "",
+  numero_programacao: 1 as number,
 };
 
-type SortKey = "nome" | "data_inicio" | "data_fim" | "dias_gozo" | "abono" | "decimo_terceiro" | "status";
+type SortKey = "nome" | "data_inicio" | "data_fim" | "dias_gozo" | "abono" | "decimo_terceiro" | "status" | "numero_programacao" | "data_limite";
 type SortDir = "asc" | "desc";
 
 export default function FeriasAgendadasTab() {
@@ -55,7 +56,7 @@ export default function FeriasAgendadasTab() {
   const load = async () => {
     const { data } = await supabase
       .from("ferias_periodos")
-      .select("*, colaboradores(nome, matricula), periodos_aquisitivos(data_inicio, data_fim)")
+      .select("*, colaboradores(nome, matricula), periodos_aquisitivos(data_inicio, data_fim, data_limite_concessao)")
       .order("data_inicio", { ascending: false });
     setFerias(data || []);
   };
@@ -120,6 +121,10 @@ export default function FeriasAgendadasTab() {
           va = a.decimo_terceiro_antecipado ? 1 : 0;
           vb = b.decimo_terceiro_antecipado ? 1 : 0;
           break;
+        case "data_limite":
+          va = (a.periodos_aquisitivos as any)?.data_limite_concessao || "";
+          vb = (b.periodos_aquisitivos as any)?.data_limite_concessao || "";
+          break;
         default:
           va = a[sortKey];
           vb = b[sortKey];
@@ -145,6 +150,7 @@ export default function FeriasAgendadasTab() {
       decimo_terceiro_antecipado: f.decimo_terceiro_antecipado,
       status: f.status,
       observacao: f.observacao || "",
+      numero_programacao: f.numero_programacao || 1,
     });
     setDialogOpen(true);
   };
@@ -175,6 +181,33 @@ export default function FeriasAgendadasTab() {
       return;
     }
 
+    // Validate numero_programacao uniqueness
+    const { data: existingProg } = await supabase
+      .from("ferias_periodos")
+      .select("id, numero_programacao")
+      .eq("periodo_aquisitivo_id", form.periodo_aquisitivo_id)
+      .eq("numero_programacao", form.numero_programacao)
+      .neq("status", "cancelada");
+
+    const duplicateProg = (existingProg || []).filter(p => p.id !== editId);
+    if (duplicateProg.length > 0) {
+      toast({ title: "Validação", description: `Já existe uma ${form.numero_programacao}ª programação para este período aquisitivo.`, variant: "destructive" });
+      return;
+    }
+
+    // Validate max 3 per periodo
+    const { data: allProg } = await supabase
+      .from("ferias_periodos")
+      .select("id")
+      .eq("periodo_aquisitivo_id", form.periodo_aquisitivo_id)
+      .neq("status", "cancelada");
+
+    const countExcluding = (allProg || []).filter(p => p.id !== editId).length;
+    if (countExcluding >= 3) {
+      toast({ title: "Validação", description: "Máximo de 3 programações por período aquisitivo.", variant: "destructive" });
+      return;
+    }
+
     setSaving(true);
     const payload: any = {
       colaborador_id: form.colaborador_id,
@@ -187,6 +220,7 @@ export default function FeriasAgendadasTab() {
       decimo_terceiro_antecipado: form.decimo_terceiro_antecipado,
       status: form.status,
       observacao: form.observacao || null,
+      numero_programacao: form.numero_programacao,
     };
 
     const { error } = editId
@@ -258,6 +292,12 @@ export default function FeriasAgendadasTab() {
                 <span className="flex items-center">Colaborador <SortIcon column="nome" /></span>
               </TableHead>
               <TableHead>Per. Aquisitivo</TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("data_limite")}>
+                <span className="flex items-center">Data Limite <SortIcon column="data_limite" /></span>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("numero_programacao")}>
+                <span className="flex items-center">Nº Prog. <SortIcon column="numero_programacao" /></span>
+              </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("data_inicio")}>
                 <span className="flex items-center">Início <SortIcon column="data_inicio" /></span>
               </TableHead>
@@ -288,6 +328,12 @@ export default function FeriasAgendadasTab() {
                     ? `${format(parseISO(f.periodos_aquisitivos.data_inicio), "dd/MM/yy")} — ${format(parseISO(f.periodos_aquisitivos.data_fim), "dd/MM/yy")}`
                     : "—"}
                 </TableCell>
+                <TableCell className="text-sm">
+                  {f.periodos_aquisitivos?.data_limite_concessao
+                    ? format(parseISO(f.periodos_aquisitivos.data_limite_concessao), "dd/MM/yyyy")
+                    : "—"}
+                </TableCell>
+                <TableCell className="text-center">{f.numero_programacao || 1}ª</TableCell>
                 <TableCell>{format(parseISO(f.data_inicio), "dd/MM/yyyy")}</TableCell>
                 <TableCell>{format(parseISO(f.data_fim), "dd/MM/yyyy")}</TableCell>
                 <TableCell>{f.dias_gozo}</TableCell>
@@ -326,7 +372,7 @@ export default function FeriasAgendadasTab() {
             ))}
             {sorted.length === 0 && (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 9 : 8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={isAdmin ? 11 : 10} className="text-center py-8 text-muted-foreground">
                   Nenhuma férias agendada.
                 </TableCell>
               </TableRow>
@@ -368,6 +414,18 @@ export default function FeriasAgendadasTab() {
               {saldoInfo !== null && (
                 <p className="text-sm text-muted-foreground">Saldo disponível: <span className="font-semibold">{saldoInfo} dias</span></p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Nº Programação *</Label>
+              <Select value={String(form.numero_programacao)} onValueChange={(v) => setForm({ ...form, numero_programacao: Number(v) })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1ª Programação</SelectItem>
+                  <SelectItem value="2">2ª Programação</SelectItem>
+                  <SelectItem value="3">3ª Programação</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
