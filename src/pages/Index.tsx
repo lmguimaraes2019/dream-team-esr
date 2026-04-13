@@ -13,6 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   PieChart, Pie, Cell, ResponsiveContainer,
 } from "recharts";
+import Organograma from "@/components/Organograma";
 
 
 const COLORS = [
@@ -485,6 +486,8 @@ export default function Index() {
           </div>
         </>
       )}
+
+      <Organograma />
     </div>
   );
 }
