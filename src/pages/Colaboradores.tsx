@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Search, Plus } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -298,6 +299,10 @@ export default function Colaboradores() {
               <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/colaboradores/${c.id}`)}>
                 <TableCell className="font-medium">
                   <span className="flex items-center gap-2 flex-wrap">
+                    <Avatar className="h-8 w-8">
+                      {c.foto_url ? <AvatarImage src={c.foto_url} alt={c.nome} /> : null}
+                      <AvatarFallback className="text-xs">{c.nome.split(" ").map(n => n[0]).slice(0, 2).join("")}</AvatarFallback>
+                    </Avatar>
                     {c.nome}
                     {ausenciasAtivas[c.id] && (
                       <Badge className="bg-amber-500 text-white border-0 text-xs">{ausenciasAtivas[c.id]}</Badge>
