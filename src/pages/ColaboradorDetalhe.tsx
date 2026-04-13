@@ -79,15 +79,47 @@ export default function ColaboradorDetalhe() {
       .maybeSingle();
     setTemFeriasNoCiclo(!!feriasAgendadas);
 
-    // Last career movement
-    const { data: lastMov } = await supabase
+    // Last career movements - fetch all ordered by date desc
+    const { data: allMovs } = await supabase
       .from("movimentacoes_carreira" as any)
-      .select("data, tipo_movimentacao")
+      .select("data, tipo_movimentacao, salario")
       .eq("colaborador_id", id)
-      .order("data", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    setUltimaMovimentacao(lastMov ? { tipo: (lastMov as any).tipo_movimentacao, data: (lastMov as any).data } : null);
+      .order("data", { ascending: false });
+
+    if (allMovs && allMovs.length > 0) {
+      const movimentos = allMovs as { data: string; tipo_movimentacao: string; salario: number | null }[];
+      
+      // Find last dissídio
+      const lastDissidio = movimentos.find(m => m.tipo_movimentacao.toLowerCase().includes("dissídio") || m.tipo_movimentacao.toLowerCase().includes("dissidio"));
+      
+      // Find last non-dissídio, non-"salário inicial" movement
+      const nonDissidioIdx = movimentos.findIndex(m => {
+        const t = m.tipo_movimentacao.toLowerCase();
+        return !t.includes("dissídio") && !t.includes("dissidio") && !t.includes("salário inicial") && !t.includes("salario inicial");
+      });
+      
+      let ultimaProgressao: { tipo: string; data: string; percentual: number | null } | null = null;
+      if (nonDissidioIdx >= 0) {
+        const mov = movimentos[nonDissidioIdx];
+        // Next line in the array (older record) for % calculation
+        const anterior = movimentos[nonDissidioIdx + 1];
+        let percentual: number | null = null;
+        if (anterior && anterior.salario && mov.salario && anterior.salario > 0) {
+          percentual = ((mov.salario - anterior.salario) / anterior.salario) * 100;
+        }
+        ultimaProgressao = { tipo: mov.tipo_movimentacao, data: mov.data, percentual };
+      }
+
+      const apenasInicialOuDissidio = !ultimaProgressao;
+      
+      setUltimaMovimentacao({
+        ultimaDissidio: lastDissidio ? { data: lastDissidio.data } : null,
+        ultimaProgressao,
+        apenasInicialOuDissidio,
+      });
+    } else {
+      setUltimaMovimentacao(null);
+    }
   };
 
   useEffect(() => { loadData(); }, [id]);
