@@ -208,13 +208,31 @@ export default function ColaboradorDetalhe() {
             <Row label="Data de Admissão" value={new Date(colab.data_admissao).toLocaleDateString("pt-BR")} />
             <Row label="Tempo de Casa" value={tempoCasa} />
             {ultimaMovimentacao && (() => {
-              const movDate = parseISO(ultimaMovimentacao.data);
-              const anosM = differenceInYears(now, movDate);
-              const mesesM = differenceInMonths(now, movDate) % 12;
-              const tempoMov = `${anosM} ano${anosM !== 1 ? "s" : ""} e ${mesesM} ${mesesM !== 1 ? "meses" : "mês"}`;
+              const { ultimaDissidio, ultimaProgressao, apenasInicialOuDissidio } = ultimaMovimentacao;
+              
+              const formatTempo = (dateStr: string) => {
+                const d = parseISO(dateStr);
+                const a = differenceInYears(now, d);
+                const m = differenceInMonths(now, d) % 12;
+                return `${a} ano${a !== 1 ? "s" : ""} e ${m} ${m !== 1 ? "meses" : "mês"}`;
+              };
+
               return (
                 <>
-                  <Row label="Última Movimentação" value={`${ultimaMovimentacao.tipo} (${tempoMov})`} />
+                  {ultimaDissidio && (
+                    <Row label="Último Dissídio" value={formatTempo(ultimaDissidio.data)} />
+                  )}
+                  {ultimaProgressao ? (
+                    <Row
+                      label="Última Progressão/Promoção"
+                      value={`${ultimaProgressao.tipo} (${formatTempo(ultimaProgressao.data)})${ultimaProgressao.percentual != null ? ` — ${ultimaProgressao.percentual.toFixed(1)}%` : ""}`}
+                    />
+                  ) : apenasInicialOuDissidio ? (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Progressão/Promoção</span>
+                      <Badge variant="secondary">Sem movimentação</Badge>
+                    </div>
+                  ) : null}
                 </>
               );
             })()}
