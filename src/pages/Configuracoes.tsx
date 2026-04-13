@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import TabelaSalarialImport from "@/components/TabelaSalarialImport";
 import OrigensRecursoConfig from "@/components/OrigensRecursoConfig";
 import ImportacaoConfig from "@/components/ImportacaoConfig";
+import MovimentacoesCarreiraImport from "@/components/MovimentacoesCarreiraImport";
 
 export default function Configuracoes() {
   const [encargos, setEncargos] = useState<any[]>([]);
@@ -214,6 +215,13 @@ export default function Configuracoes() {
         <CardHeader><CardTitle className="text-base">Importação de Planilha</CardTitle></CardHeader>
         <CardContent>
           <ImportacaoConfig />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Movimentações de Carreira</CardTitle></CardHeader>
+        <CardContent>
+          <MovimentacoesCarreiraImport />
         </CardContent>
       </Card>
 

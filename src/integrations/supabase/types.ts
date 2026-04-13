@@ -480,6 +480,53 @@ export type Database = {
           },
         ]
       }
+      movimentacoes_carreira: {
+        Row: {
+          cargo: string | null
+          colaborador_id: string
+          created_at: string
+          data: string
+          grupo: string | null
+          id: string
+          nivel: string | null
+          salario: number | null
+          tipo_movimentacao: string
+          trajetoria: string | null
+        }
+        Insert: {
+          cargo?: string | null
+          colaborador_id: string
+          created_at?: string
+          data: string
+          grupo?: string | null
+          id?: string
+          nivel?: string | null
+          salario?: number | null
+          tipo_movimentacao: string
+          trajetoria?: string | null
+        }
+        Update: {
+          cargo?: string | null
+          colaborador_id?: string
+          created_at?: string
+          data?: string
+          grupo?: string | null
+          id?: string
+          nivel?: string | null
+          salario?: number | null
+          tipo_movimentacao?: string
+          trajetoria?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimentacoes_carreira_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       one_on_one: {
         Row: {
           colaborador_id: string
