@@ -108,8 +108,8 @@ export default function Organograma() {
           <div className="flex gap-12 pb-4">
             {Object.entries(byArea).sort(([a], [b]) => a.localeCompare(b)).map(([area, nodes]) => (
               <div key={area} className="flex flex-col items-center">
-                <span className="text-sm font-bold text-primary mb-3 px-3 py-1 rounded-full bg-primary/10">{area}</span>
-                <div className="flex gap-6">
+                <span className="text-[9px] font-bold text-primary mb-2 px-2 py-0.5 rounded-full bg-primary/10">{area}</span>
+                <div className="flex gap-3">
                   {nodes.map((node) => (
                     <OrgCard key={node.colaborador.id} node={node} navigate={navigate} />
                   ))}
