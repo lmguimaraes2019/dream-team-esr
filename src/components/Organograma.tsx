@@ -70,7 +70,7 @@ function OrgCard({ node, navigate }: { node: OrgNode; navigate: (path: string) =
             )}
             {node.children.map((child) => (
               <div key={child.colaborador.id} className="flex flex-col items-center">
-                <div className="w-px h-4 bg-border" />
+                <div className="w-px h-2 bg-border" />
                 <OrgCard node={child} navigate={navigate} />
               </div>
             ))}
