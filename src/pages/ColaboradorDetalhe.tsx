@@ -118,6 +118,12 @@ export default function ColaboradorDetalhe() {
       }
 
       const apenasInicialOuDissidio = !ultimaProgressao;
+
+      setUltimaMovimentacao({
+        ultimaDissidio,
+        ultimaProgressao,
+        apenasInicialOuDissidio,
+      });
     } else {
       setUltimaMovimentacao(null);
     }
@@ -208,35 +214,6 @@ export default function ColaboradorDetalhe() {
             <Row label="Liderança" value={colab.lideranca ? "Sim" : "Não"} />
             <Row label="Data de Admissão" value={new Date(colab.data_admissao).toLocaleDateString("pt-BR")} />
             <Row label="Tempo de Casa" value={tempoCasa} />
-            {ultimaMovimentacao && (() => {
-              const { ultimaDissidio, ultimaProgressao, apenasInicialOuDissidio } = ultimaMovimentacao;
-              
-              const formatTempo = (dateStr: string) => {
-                const d = parseISO(dateStr);
-                const a = differenceInYears(now, d);
-                const m = differenceInMonths(now, d) % 12;
-                return `${a} ano${a !== 1 ? "s" : ""} e ${m} ${m !== 1 ? "meses" : "mês"}`;
-              };
-
-              return (
-                <>
-                  {ultimaDissidio && (
-                    <Row label="Último Dissídio" value={formatTempo(ultimaDissidio.data)} />
-                  )}
-                  {ultimaProgressao ? (
-                    <Row
-                      label="Última Progressão/Promoção"
-                      value={`${ultimaProgressao.tipo} (${formatTempo(ultimaProgressao.data)})${ultimaProgressao.percentual != null ? ` — ${ultimaProgressao.percentual.toFixed(1)}%` : ""}`}
-                    />
-                  ) : apenasInicialOuDissidio ? (
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Progressão/Promoção</span>
-                      <Badge variant="secondary">Sem movimentação</Badge>
-                    </div>
-                  ) : null}
-                </>
-              );
-            })()}
             <Row label="Gerência" value={colab.gerencia} />
             <Row label="Diretoria" value={colab.diretoria} />
             {!isTerceirizado && (colab as any).origem_recurso && (
@@ -269,6 +246,37 @@ export default function ColaboradorDetalhe() {
               <Row label="Trajetória" value={colab.trajetoria} />
               <Row label="Nível de Complexidade" value={nivelLabel(colab.nivel_complexidade)} />
               <Row label="Grupo" value={String(colab.grupo)} />
+              {/* Dissídio */}
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Dissídio</span>
+                {ultimaMovimentacao?.ultimaDissidio ? (
+                  <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border-0">
+                    {new Date(ultimaMovimentacao.ultimaDissidio.data).getFullYear()}
+                    {ultimaMovimentacao.ultimaDissidio.percentual != null && ` • ${ultimaMovimentacao.ultimaDissidio.percentual.toFixed(1)}%`}
+                  </Badge>
+                ) : (
+                  <Badge className="bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 border-0">Nenhum dissídio</Badge>
+                )}
+              </div>
+              {/* Última Movimentação */}
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Última Movimentação</span>
+                {ultimaMovimentacao?.ultimaProgressao ? (
+                  <span className="font-medium text-right text-xs">
+                    {ultimaMovimentacao.ultimaProgressao.tipo}
+                    {ultimaMovimentacao.ultimaProgressao.percentual != null && ` • ${ultimaMovimentacao.ultimaProgressao.percentual.toFixed(1)}%`}
+                    {" • "}
+                    {(() => {
+                      const d = parseISO(ultimaMovimentacao.ultimaProgressao.data);
+                      const a = differenceInYears(now, d);
+                      const m = differenceInMonths(now, d) % 12;
+                      return `${a}a ${m}m`;
+                    })()}
+                  </span>
+                ) : (
+                  <Badge variant="secondary">Sem movimentação</Badge>
+                )}
+              </div>
               {custo && (
                 <SalaryRangeRuler trajetoria={colab.trajetoria} nivel_complexidade={colab.nivel_complexidade} grupo={colab.grupo} salario={custo.salario_base} />
               )}
