@@ -33,7 +33,7 @@ export default function ColaboradorDetalhe() {
   const [temFeriasNoCiclo, setTemFeriasNoCiclo] = useState(true);
   const [showCustos, setShowCustos] = useState(false);
   const [ultimaMovimentacao, setUltimaMovimentacao] = useState<{
-    ultimaDissidio: { data: string } | null;
+    ultimaDissidio: { data: string; percentual: number | null } | null;
     ultimaProgressao: { tipo: string; data: string; percentual: number | null } | null;
     apenasInicialOuDissidio: boolean;
   } | null>(null);
