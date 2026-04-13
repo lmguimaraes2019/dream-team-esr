@@ -63,8 +63,8 @@ function OrgCard({ node, navigate }: { node: OrgNode; navigate: (path: string) =
 
       {node.children.length > 0 && (
         <>
-          <div className="w-px h-4 bg-border" />
-          <div className="relative flex gap-4">
+          <div className="w-px h-2 bg-border" />
+          <div className="relative flex gap-2">
             {node.children.length > 1 && (
               <div className="absolute top-0 left-[calc(50%-50%+70px)] right-[calc(50%-50%+70px)] h-px bg-border" style={{ left: '70px', right: '70px', width: 'auto' }} />
             )}
