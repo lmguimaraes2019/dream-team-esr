@@ -15,6 +15,7 @@ import ColaboradorEditDialog from "@/components/ColaboradorEditDialog";
 import SalaryRangeRuler from "@/components/SalaryRangeRuler";
 import ColaboradorFerias from "@/components/ferias/ColaboradorFerias";
 import ColaboradorFeedback1on1 from "@/components/feedback/ColaboradorFeedback1on1";
+import MovimentacoesCarreiraCard from "@/components/MovimentacoesCarreiraCard";
 import { useToast } from "@/hooks/use-toast";
 
 type Colaborador = Tables<"colaboradores">;
@@ -31,6 +32,7 @@ export default function ColaboradorDetalhe() {
   const [ausenciaAtiva, setAusenciaAtiva] = useState<{ tipo: string; label: string } | null>(null);
   const [temFeriasNoCiclo, setTemFeriasNoCiclo] = useState(true);
   const [showCustos, setShowCustos] = useState(false);
+  const [ultimaMovimentacao, setUltimaMovimentacao] = useState<{ tipo: string; data: string } | null>(null);
   const { isAdmin } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -72,6 +74,16 @@ export default function ColaboradorDetalhe() {
       .limit(1)
       .maybeSingle();
     setTemFeriasNoCiclo(!!feriasAgendadas);
+
+    // Last career movement
+    const { data: lastMov } = await supabase
+      .from("movimentacoes_carreira" as any)
+      .select("data, tipo_movimentacao")
+      .eq("colaborador_id", id)
+      .order("data", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setUltimaMovimentacao(lastMov ? { tipo: (lastMov as any).tipo_movimentacao, data: (lastMov as any).data } : null);
   };
 
   useEffect(() => { loadData(); }, [id]);
@@ -159,6 +171,17 @@ export default function ColaboradorDetalhe() {
             <Row label="Liderança" value={colab.lideranca ? "Sim" : "Não"} />
             <Row label="Data de Admissão" value={new Date(colab.data_admissao).toLocaleDateString("pt-BR")} />
             <Row label="Tempo de Casa" value={tempoCasa} />
+            {ultimaMovimentacao && (() => {
+              const movDate = parseISO(ultimaMovimentacao.data);
+              const anosM = differenceInYears(now, movDate);
+              const mesesM = differenceInMonths(now, movDate) % 12;
+              const tempoMov = `${anosM} ano${anosM !== 1 ? "s" : ""} e ${mesesM} ${mesesM !== 1 ? "meses" : "mês"}`;
+              return (
+                <>
+                  <Row label="Última Movimentação" value={`${ultimaMovimentacao.tipo} (${tempoMov})`} />
+                </>
+              );
+            })()}
             <Row label="Gerência" value={colab.gerencia} />
             <Row label="Diretoria" value={colab.diretoria} />
             {!isTerceirizado && (colab as any).origem_recurso && (
@@ -198,6 +221,9 @@ export default function ColaboradorDetalhe() {
           </Card>
         )}
       </div>
+
+      {/* Movimentações de Carreira */}
+      <MovimentacoesCarreiraCard colaboradorId={colab.id} />
 
       {/* Férias e Licenças */}
       <ColaboradorFerias colaboradorId={colab.id} />
