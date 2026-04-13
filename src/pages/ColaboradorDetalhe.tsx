@@ -89,10 +89,18 @@ export default function ColaboradorDetalhe() {
     if (allMovs && allMovs.length > 0) {
       const movimentos = (allMovs as any) as { data: string; tipo_movimentacao: string; salario: number | null }[];
       
-      // Find last dissídio
-      const lastDissidio = movimentos.find(m => m.tipo_movimentacao.toLowerCase().includes("dissídio") || m.tipo_movimentacao.toLowerCase().includes("dissidio"));
+      const lastDissidioIdx = movimentos.findIndex(m => m.tipo_movimentacao.toLowerCase().includes("dissídio") || m.tipo_movimentacao.toLowerCase().includes("dissidio"));
+      let ultimaDissidio: { data: string; percentual: number | null } | null = null;
+      if (lastDissidioIdx >= 0) {
+        const mov = movimentos[lastDissidioIdx];
+        const anterior = movimentos[lastDissidioIdx + 1];
+        let percentual: number | null = null;
+        if (anterior && anterior.salario && mov.salario && anterior.salario > 0) {
+          percentual = ((mov.salario - anterior.salario) / anterior.salario) * 100;
+        }
+        ultimaDissidio = { data: mov.data, percentual };
+      }
       
-      // Find last non-dissídio, non-"salário inicial" movement
       const nonDissidioIdx = movimentos.findIndex(m => {
         const t = m.tipo_movimentacao.toLowerCase();
         return !t.includes("dissídio") && !t.includes("dissidio") && !t.includes("salário inicial") && !t.includes("salario inicial");
@@ -101,7 +109,6 @@ export default function ColaboradorDetalhe() {
       let ultimaProgressao: { tipo: string; data: string; percentual: number | null } | null = null;
       if (nonDissidioIdx >= 0) {
         const mov = movimentos[nonDissidioIdx];
-        // Next line in the array (older record) for % calculation
         const anterior = movimentos[nonDissidioIdx + 1];
         let percentual: number | null = null;
         if (anterior && anterior.salario && mov.salario && anterior.salario > 0) {
@@ -111,12 +118,6 @@ export default function ColaboradorDetalhe() {
       }
 
       const apenasInicialOuDissidio = !ultimaProgressao;
-      
-      setUltimaMovimentacao({
-        ultimaDissidio: lastDissidio ? { data: lastDissidio.data } : null,
-        ultimaProgressao,
-        apenasInicialOuDissidio,
-      });
     } else {
       setUltimaMovimentacao(null);
     }
