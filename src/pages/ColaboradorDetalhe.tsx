@@ -32,7 +32,11 @@ export default function ColaboradorDetalhe() {
   const [ausenciaAtiva, setAusenciaAtiva] = useState<{ tipo: string; label: string } | null>(null);
   const [temFeriasNoCiclo, setTemFeriasNoCiclo] = useState(true);
   const [showCustos, setShowCustos] = useState(false);
-  const [ultimaMovimentacao, setUltimaMovimentacao] = useState<{ tipo: string; data: string } | null>(null);
+  const [ultimaMovimentacao, setUltimaMovimentacao] = useState<{
+    ultimaDissidio: { data: string } | null;
+    ultimaProgressao: { tipo: string; data: string; percentual: number | null } | null;
+    apenasInicialOuDissidio: boolean;
+  } | null>(null);
   const { isAdmin } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
