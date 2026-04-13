@@ -32,7 +32,11 @@ export default function ColaboradorDetalhe() {
   const [ausenciaAtiva, setAusenciaAtiva] = useState<{ tipo: string; label: string } | null>(null);
   const [temFeriasNoCiclo, setTemFeriasNoCiclo] = useState(true);
   const [showCustos, setShowCustos] = useState(false);
-  const [ultimaMovimentacao, setUltimaMovimentacao] = useState<{ tipo: string; data: string } | null>(null);
+  const [ultimaMovimentacao, setUltimaMovimentacao] = useState<{
+    ultimaDissidio: { data: string } | null;
+    ultimaProgressao: { tipo: string; data: string; percentual: number | null } | null;
+    apenasInicialOuDissidio: boolean;
+  } | null>(null);
   const { isAdmin } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -75,15 +79,47 @@ export default function ColaboradorDetalhe() {
       .maybeSingle();
     setTemFeriasNoCiclo(!!feriasAgendadas);
 
-    // Last career movement
-    const { data: lastMov } = await supabase
+    // Last career movements - fetch all ordered by date desc
+    const { data: allMovs } = await supabase
       .from("movimentacoes_carreira" as any)
-      .select("data, tipo_movimentacao")
+      .select("data, tipo_movimentacao, salario")
       .eq("colaborador_id", id)
-      .order("data", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    setUltimaMovimentacao(lastMov ? { tipo: (lastMov as any).tipo_movimentacao, data: (lastMov as any).data } : null);
+      .order("data", { ascending: false });
+
+    if (allMovs && allMovs.length > 0) {
+      const movimentos = (allMovs as any) as { data: string; tipo_movimentacao: string; salario: number | null }[];
+      
+      // Find last dissídio
+      const lastDissidio = movimentos.find(m => m.tipo_movimentacao.toLowerCase().includes("dissídio") || m.tipo_movimentacao.toLowerCase().includes("dissidio"));
+      
+      // Find last non-dissídio, non-"salário inicial" movement
+      const nonDissidioIdx = movimentos.findIndex(m => {
+        const t = m.tipo_movimentacao.toLowerCase();
+        return !t.includes("dissídio") && !t.includes("dissidio") && !t.includes("salário inicial") && !t.includes("salario inicial");
+      });
+      
+      let ultimaProgressao: { tipo: string; data: string; percentual: number | null } | null = null;
+      if (nonDissidioIdx >= 0) {
+        const mov = movimentos[nonDissidioIdx];
+        // Next line in the array (older record) for % calculation
+        const anterior = movimentos[nonDissidioIdx + 1];
+        let percentual: number | null = null;
+        if (anterior && anterior.salario && mov.salario && anterior.salario > 0) {
+          percentual = ((mov.salario - anterior.salario) / anterior.salario) * 100;
+        }
+        ultimaProgressao = { tipo: mov.tipo_movimentacao, data: mov.data, percentual };
+      }
+
+      const apenasInicialOuDissidio = !ultimaProgressao;
+      
+      setUltimaMovimentacao({
+        ultimaDissidio: lastDissidio ? { data: lastDissidio.data } : null,
+        ultimaProgressao,
+        apenasInicialOuDissidio,
+      });
+    } else {
+      setUltimaMovimentacao(null);
+    }
   };
 
   useEffect(() => { loadData(); }, [id]);
@@ -172,13 +208,31 @@ export default function ColaboradorDetalhe() {
             <Row label="Data de Admissão" value={new Date(colab.data_admissao).toLocaleDateString("pt-BR")} />
             <Row label="Tempo de Casa" value={tempoCasa} />
             {ultimaMovimentacao && (() => {
-              const movDate = parseISO(ultimaMovimentacao.data);
-              const anosM = differenceInYears(now, movDate);
-              const mesesM = differenceInMonths(now, movDate) % 12;
-              const tempoMov = `${anosM} ano${anosM !== 1 ? "s" : ""} e ${mesesM} ${mesesM !== 1 ? "meses" : "mês"}`;
+              const { ultimaDissidio, ultimaProgressao, apenasInicialOuDissidio } = ultimaMovimentacao;
+              
+              const formatTempo = (dateStr: string) => {
+                const d = parseISO(dateStr);
+                const a = differenceInYears(now, d);
+                const m = differenceInMonths(now, d) % 12;
+                return `${a} ano${a !== 1 ? "s" : ""} e ${m} ${m !== 1 ? "meses" : "mês"}`;
+              };
+
               return (
                 <>
-                  <Row label="Última Movimentação" value={`${ultimaMovimentacao.tipo} (${tempoMov})`} />
+                  {ultimaDissidio && (
+                    <Row label="Último Dissídio" value={formatTempo(ultimaDissidio.data)} />
+                  )}
+                  {ultimaProgressao ? (
+                    <Row
+                      label="Última Progressão/Promoção"
+                      value={`${ultimaProgressao.tipo} (${formatTempo(ultimaProgressao.data)})${ultimaProgressao.percentual != null ? ` — ${ultimaProgressao.percentual.toFixed(1)}%` : ""}`}
+                    />
+                  ) : apenasInicialOuDissidio ? (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Progressão/Promoção</span>
+                      <Badge variant="secondary">Sem movimentação</Badge>
+                    </div>
+                  ) : null}
                 </>
               );
             })()}
