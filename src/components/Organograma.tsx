@@ -50,15 +50,15 @@ function OrgCard({ node, navigate }: { node: OrgNode; navigate: (path: string) =
   return (
     <div className="flex flex-col items-center">
       <div
-        className="flex flex-col items-center p-3 rounded-lg border bg-card hover:shadow-md transition-shadow cursor-pointer min-w-[140px]"
+        className="flex flex-col items-center p-1.5 rounded-md border bg-card hover:shadow-md transition-shadow cursor-pointer min-w-[70px]"
         onClick={() => navigate(`/colaboradores/${c.id}`)}
       >
-        <Avatar className="h-12 w-12 mb-2">
+        <Avatar className="h-6 w-6 mb-1">
           {c.foto_url ? <AvatarImage src={c.foto_url} alt={c.nome} /> : null}
-          <AvatarFallback className="text-sm font-medium">{initials}</AvatarFallback>
+          <AvatarFallback className="text-[8px] font-medium">{initials}</AvatarFallback>
         </Avatar>
-        <span className="text-sm font-semibold text-center leading-tight">{c.nome}</span>
-        <span className="text-xs text-muted-foreground text-center mt-0.5">{c.cargo}</span>
+        <span className="text-[9px] font-semibold text-center leading-tight">{c.nome}</span>
+        <span className="text-[8px] text-muted-foreground text-center mt-0.5">{c.cargo}</span>
       </div>
 
       {node.children.length > 0 && (
