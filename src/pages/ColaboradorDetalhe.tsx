@@ -87,7 +87,7 @@ export default function ColaboradorDetalhe() {
       .order("data", { ascending: false });
 
     if (allMovs && allMovs.length > 0) {
-      const movimentos = allMovs as { data: string; tipo_movimentacao: string; salario: number | null }[];
+      const movimentos = (allMovs as any) as { data: string; tipo_movimentacao: string; salario: number | null }[];
       
       // Find last dissídio
       const lastDissidio = movimentos.find(m => m.tipo_movimentacao.toLowerCase().includes("dissídio") || m.tipo_movimentacao.toLowerCase().includes("dissidio"));
