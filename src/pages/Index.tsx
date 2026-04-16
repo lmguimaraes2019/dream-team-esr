@@ -222,11 +222,16 @@ export default function Index() {
       const n = (c.colaboradores as any)?.nivel_complexidade || "N/A";
       nivelMap[n] = (nivelMap[n] || 0) + 1;
     });
+    const NIVEL_ORDER = ["gerente_03", "gerente_02", "gerente_01", "especialista", "master", "senior", "pleno", "junior", "assistente"];
     setDistNivel(
-      Object.entries(nivelMap).map(([k, v]) => ({
-        name: nivelLabel(k),
-        value: v,
-      }))
+      NIVEL_ORDER
+        .filter((k) => nivelMap[k])
+        .map((k) => ({ name: nivelLabel(k), value: nivelMap[k] }))
+        .concat(
+          Object.entries(nivelMap)
+            .filter(([k]) => !NIVEL_ORDER.includes(k))
+            .map(([k, v]) => ({ name: nivelLabel(k), value: v }))
+        )
     );
 
     // Distribuição por trajetória
@@ -235,11 +240,16 @@ export default function Index() {
       const t = (c.colaboradores as any)?.trajetoria || "N/A";
       trajMap[t] = (trajMap[t] || 0) + 1;
     });
+    const TRAJ_ORDER = ["Liderança", "Gestão do Negócio", "Tecnológica", "Relacionamento", "N/A"];
     setDistTrajetoria(
-      Object.entries(trajMap).map(([k, v]) => ({
-        name: k.charAt(0).toUpperCase() + k.slice(1),
-        value: v,
-      }))
+      TRAJ_ORDER
+        .filter((k) => trajMap[k])
+        .map((k) => ({ name: k, value: trajMap[k] }))
+        .concat(
+          Object.entries(trajMap)
+            .filter(([k]) => !TRAJ_ORDER.includes(k))
+            .map(([k, v]) => ({ name: k, value: v }))
+        )
     );
   };
 
@@ -426,21 +436,23 @@ export default function Index() {
             </CardContent>
           </Card>
 
-          {/* Charts row 3 - Pies */}
+          {/* Charts row 3 - Bars */}
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader><CardTitle className="text-base">Distribuição por Nível</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={250}>
-                  <PieChart className="text-xs">
-                    <Pie data={distNivel} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
+                  <BarChart data={distNivel} className="text-xs">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="value" name="Colaboradores" radius={[4, 4, 0, 0]}>
                       {distNivel.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend className="text-xs" />
-                  </PieChart>
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
@@ -448,15 +460,17 @@ export default function Index() {
               <CardHeader><CardTitle className="text-base">Distribuição por Trajetória</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={250}>
-                  <PieChart className="text-xs">
-                    <Pie data={distTrajetoria} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
+                  <BarChart data={distTrajetoria} className="text-xs">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="value" name="Colaboradores" radius={[4, 4, 0, 0]}>
                       {distTrajetoria.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend className="text-xs" />
-                  </PieChart>
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
