@@ -60,8 +60,6 @@ export default function Index() {
   const [distNivel, setDistNivel] = useState<any[]>([]);
   const [distTrajetoria, setDistTrajetoria] = useState<any[]>([]);
   const [ausentes, setAusentes] = useState<any[]>([]);
-  const [periodosVencidos, setPeriodosVencidos] = useState(0);
-  const [periodosVencendo, setPeriodosVencendo] = useState(0);
   const [pctComOneOnOne, setPctComOneOnOne] = useState(0);
   const [feedbacksMes, setFeedbacksMes] = useState(0);
   const [acoesAbertas, setAcoesAbertas] = useState(0);
@@ -90,12 +88,6 @@ export default function Index() {
       setAusentes(all);
     });
 
-    // Load periodos stats
-    supabase.from("periodos_aquisitivos").select("status, data_limite_concessao").eq("desconsiderar_periodo", false).then(({ data }) => {
-      setPeriodosVencidos((data || []).filter((p) => p.status === "vencido").length);
-      const in60 = new Date(Date.now() + 60 * 86400000).toISOString().split("T")[0];
-      setPeriodosVencendo((data || []).filter((p) => p.status !== "vencido" && p.status !== "concluido" && p.data_limite_concessao <= in60 && p.data_limite_concessao >= today).length);
-    });
 
     // Feedback & 1:1 KPIs — only for direct reports (gestor_direto matches current user)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
@@ -169,9 +161,15 @@ export default function Index() {
     setCustoTotal(total);
     setCustoMedio(total / custos.length);
 
+    // Filtrar colaboradores excluindo Diretor Adjunto dos gráficos
+    const custosGraficos = custos.filter((c) => {
+      const cargo = ((c.colaboradores as any)?.cargo || "").toUpperCase();
+      return !cargo.includes("DIRETOR ADJUNTO");
+    });
+
     // Salário médio por gênero
     const generoMap: Record<string, { sum: number; count: number }> = {};
-    custos.forEach((c) => {
+    custosGraficos.forEach((c) => {
       const g = (c.colaboradores as any)?.genero || "outro";
       if (!generoMap[g]) generoMap[g] = { sum: 0, count: 0 };
       generoMap[g].sum += Number(c.salario_base);
@@ -186,7 +184,7 @@ export default function Index() {
 
     // Salário por gênero x liderança — grouped by liderança
     const glMap: Record<string, Record<string, { sum: number; count: number }>> = {};
-    custos.forEach((c) => {
+    custosGraficos.forEach((c) => {
       const col = c.colaboradores as any;
       const lider = col?.lideranca ? "Líder" : "Não Líder";
       const g = col?.genero || "outro";
@@ -208,7 +206,7 @@ export default function Index() {
 
     // Custo por gerência
     const gerMap: Record<string, number> = {};
-    custos.forEach((c) => {
+    custosGraficos.forEach((c) => {
       const g = (c.colaboradores as any)?.gerencia || "N/A";
       gerMap[g] = (gerMap[g] || 0) + Number(c.custo_mensal);
     });
@@ -220,7 +218,7 @@ export default function Index() {
 
     // Distribuição por nível
     const nivelMap: Record<string, number> = {};
-    custos.forEach((c) => {
+    custosGraficos.forEach((c) => {
       const n = (c.colaboradores as any)?.nivel_complexidade || "N/A";
       nivelMap[n] = (nivelMap[n] || 0) + 1;
     });
@@ -233,7 +231,7 @@ export default function Index() {
 
     // Distribuição por trajetória
     const trajMap: Record<string, number> = {};
-    custos.forEach((c) => {
+    custosGraficos.forEach((c) => {
       const t = (c.colaboradores as any)?.trajetoria || "N/A";
       trajMap[t] = (trajMap[t] || 0) + 1;
     });
@@ -294,27 +292,6 @@ export default function Index() {
         </Card>
       </div>
 
-      {/* Períodos vencidos/vencendo cards */}
-      {(periodosVencidos > 0 || periodosVencendo > 0) && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Períodos Vencidos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-destructive">{periodosVencidos}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Vencendo em 60 dias</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-amber-500">{periodosVencendo}</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Feedback & 1:1 KPIs */}
       <div className="grid gap-4 md:grid-cols-4">
