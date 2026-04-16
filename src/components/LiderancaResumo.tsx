@@ -332,17 +332,6 @@ export default function LiderancaResumo() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Badge variant={pctGeral >= 50 ? "secondary" : "destructive"} className="text-xs">
-              <Users2 className="h-3 w-3 mr-1" />1:1: {kpiGeral.oneOnOnes}/{metaGeral} ({pctGeral}%)
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              <MessageSquare className="h-3 w-3 mr-1" />{kpiGeral.feedbacks} feedbacks
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              <Target className="h-3 w-3 mr-1" />{kpiGeral.acoesAbertas} ações abertas
-            </Badge>
-          </div>
         </div>
 
         {/* Progress bar for 1:1 meta */}
