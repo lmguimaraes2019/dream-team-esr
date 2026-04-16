@@ -345,6 +345,8 @@ export default function Index() {
         </Card>
       </div>
 
+      <LiderancaResumo />
+
 
       {ausentes.length > 0 && (
         <Card>
