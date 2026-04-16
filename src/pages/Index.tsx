@@ -387,7 +387,7 @@ export default function Index() {
           {/* Charts row 1 */}
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
-              <CardHeader><CardTitle className="text-base">Salário Médio por Gênero</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">Salário Médio por Gênero (mensal)</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={salarioGenero} margin={{ bottom: 50 }} className="text-xs">
@@ -405,7 +405,7 @@ export default function Index() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle className="text-base">Salário por Gênero × Liderança</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">Salário por Gênero × Liderança (mensal)</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={salarioGeneroLider} className="text-xs">
@@ -425,7 +425,7 @@ export default function Index() {
 
           {/* Charts row 2 */}
           <Card>
-            <CardHeader><CardTitle className="text-base">Custo por Gerência</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Custo por Gerência (mensal)</CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={custoGerencia} layout="vertical" className="text-xs">
