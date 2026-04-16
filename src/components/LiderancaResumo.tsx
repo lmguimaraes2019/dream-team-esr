@@ -4,11 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { ChevronDown, ChevronRight, Users, DollarSign } from "lucide-react";
-import { nivelLabel } from "@/lib/nivelLabels";
+import { ChevronDown, ChevronRight, Users, Users2, MessageSquare, Target, CheckCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
-const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const META_1ON1_ANO = 5;
 
 interface Colab {
   id: string;
@@ -16,11 +15,16 @@ interface Colab {
   cargo: string;
   gerencia: string;
   gestor_direto: string | null;
-  nivel_complexidade: string;
   lideranca: boolean;
   foto_url: string | null;
-  custo_mensal: number;
-  salario_base: number;
+}
+
+interface KpiData {
+  oneOnOnes: number;
+  feedbacks: number;
+  acoesAbertas: number;
+  acoesConcluidas: number;
+  acoesTotal: number;
 }
 
 interface AreaNode {
@@ -29,60 +33,70 @@ interface AreaNode {
   subLideres: AreaNode[];
 }
 
-// Specific names for Diretoria Adjunta aggregation
 const DIRETORIA_NOMES = ["LUCIANA BATISTA DA SILVA", "YVE A MARCIAL G  DE BARROS", "RENATO DUARTE ROCHA", "CELIA MARIA QUEIROGA MACIEL", "OLAVO LEMOS CALACA DAS NEVES"];
 
 export default function LiderancaResumo() {
   const [leandro, setLeandro] = useState<Colab | null>(null);
   const [areas, setAreas] = useState<AreaNode[]>([]);
   const [expandedAreas, setExpandedAreas] = useState<Set<string>>(new Set());
+  const [kpiMap, setKpiMap] = useState<Map<string, KpiData>>(new Map());
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    // Get latest mes_referencia
-    const { data: mesData } = await supabase
-      .from("custos_mensais")
-      .select("mes_referencia")
-      .order("mes_referencia", { ascending: false })
-      .limit(1);
-    const mesRef = mesData?.[0]?.mes_referencia;
-    if (!mesRef) return;
-
     const { data: colabs } = await supabase
       .from("colaboradores")
-      .select("id, nome, cargo, gerencia, gestor_direto, nivel_complexidade, lideranca, foto_url")
+      .select("id, nome, cargo, gerencia, gestor_direto, lideranca, foto_url")
       .eq("ativo", true);
 
-    const { data: custos } = await supabase
-      .from("custos_mensais")
-      .select("colaborador_id, custo_mensal, salario_base")
-      .eq("mes_referencia", mesRef);
+    if (!colabs) return;
 
-    if (!colabs || !custos) return;
+    const anoAtual = new Date().getFullYear();
+    const inicioAno = `${anoAtual}-01-01`;
+    const fimAno = `${anoAtual}-12-31`;
 
-    const custoMap = new Map(custos.map((c) => [c.colaborador_id, c]));
+    const allIds = colabs.map((c) => c.id);
 
-    const enriched: Colab[] = colabs.map((c) => ({
-      ...c,
-      custo_mensal: Number(custoMap.get(c.id)?.custo_mensal || 0),
-      salario_base: Number(custoMap.get(c.id)?.salario_base || 0),
-    }));
+    const [oooRes, fbRes, acoesRes] = await Promise.all([
+      supabase.from("one_on_one").select("colaborador_id").gte("data", inicioAno).lte("data", fimAno).in("colaborador_id", allIds),
+      supabase.from("feedback").select("colaborador_id").gte("data", inicioAno).lte("data", fimAno).in("colaborador_id", allIds),
+      supabase.from("desenvolvimento_acoes").select("colaborador_id, status").in("colaborador_id", allIds),
+    ]);
 
-    // Find Leandro
-    const leandroColab = enriched.find((c) => c.cargo.toUpperCase().includes("DIRETOR ADJUNTO"));
+    // Build per-collaborator KPI map
+    const map = new Map<string, KpiData>();
+    allIds.forEach((id) => map.set(id, { oneOnOnes: 0, feedbacks: 0, acoesAbertas: 0, acoesConcluidas: 0, acoesTotal: 0 }));
+
+    (oooRes.data || []).forEach((o: any) => {
+      const k = map.get(o.colaborador_id);
+      if (k) k.oneOnOnes++;
+    });
+    (fbRes.data || []).forEach((f: any) => {
+      const k = map.get(f.colaborador_id);
+      if (k) k.feedbacks++;
+    });
+    (acoesRes.data || []).forEach((a: any) => {
+      const k = map.get(a.colaborador_id);
+      if (k) {
+        k.acoesTotal++;
+        if (a.status === "concluido") k.acoesConcluidas++;
+        else k.acoesAbertas++;
+      }
+    });
+
+    setKpiMap(map);
+
+    const leandroColab = colabs.find((c) => c.cargo.toUpperCase().includes("DIRETOR ADJUNTO"));
     if (leandroColab) setLeandro(leandroColab);
 
-    // Build area trees from the gerente_02/01 who report to Leandro
-    const diretosLeandro = enriched.filter((c) => DIRETORIA_NOMES.includes(c.nome));
+    const diretosLeandro = colabs.filter((c) => DIRETORIA_NOMES.includes(c.nome));
 
     const buildTree = (lider: Colab): AreaNode => {
-      const subs = enriched.filter((c) => c.gestor_direto === lider.nome && c.id !== lider.id);
+      const subs = colabs.filter((c) => c.gestor_direto === lider.nome && c.id !== lider.id);
       const subLideres = subs.filter((s) => s.lideranca);
       const naoLideres = subs.filter((s) => !s.lideranca);
-
       return {
         lider,
         subordinados: naoLideres,
@@ -101,25 +115,99 @@ export default function LiderancaResumo() {
     });
   };
 
-  const countAll = (node: AreaNode): number => {
-    return node.subordinados.length + node.subLideres.reduce((s, sl) => s + 1 + countAll(sl), 0);
+  // Collect all non-leader IDs under a node (the team members)
+  const collectTeamIds = (node: AreaNode): string[] => {
+    return [
+      ...node.subordinados.map((s) => s.id),
+      ...node.subLideres.flatMap((sl) => [sl.lider.id, ...collectTeamIds(sl)]),
+    ];
   };
 
-  const custoAll = (node: AreaNode): number => {
-    return (
-      node.lider.custo_mensal +
-      node.subordinados.reduce((s, c) => s + c.custo_mensal, 0) +
-      node.subLideres.reduce((s, sl) => s + custoAll(sl), 0)
-    );
+  const countAll = (node: AreaNode): number => collectTeamIds(node).length;
+
+  const aggregateKpis = (ids: string[]): KpiData => {
+    const result: KpiData = { oneOnOnes: 0, feedbacks: 0, acoesAbertas: 0, acoesConcluidas: 0, acoesTotal: 0 };
+    ids.forEach((id) => {
+      const k = kpiMap.get(id);
+      if (k) {
+        result.oneOnOnes += k.oneOnOnes;
+        result.feedbacks += k.feedbacks;
+        result.acoesAbertas += k.acoesAbertas;
+        result.acoesConcluidas += k.acoesConcluidas;
+        result.acoesTotal += k.acoesTotal;
+      }
+    });
+    return result;
   };
 
   const initials = (nome: string) =>
     nome.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
+  const KpiBar = ({ ids }: { ids: string[] }) => {
+    const kpi = aggregateKpis(ids);
+    const teamSize = ids.length;
+    const metaTotal = teamSize * META_1ON1_ANO;
+    const pct1on1 = metaTotal > 0 ? Math.round((kpi.oneOnOnes / metaTotal) * 100) : 0;
+    const taxaConclusao = kpi.acoesTotal > 0 ? Math.round((kpi.acoesConcluidas / kpi.acoesTotal) * 100) : 0;
+
+    return (
+      <div className="flex items-center gap-3 text-xs">
+        <div className="flex items-center gap-1" title={`1:1 realizados no ano: ${kpi.oneOnOnes} / meta: ${metaTotal}`}>
+          <Users2 className="h-3 w-3 text-muted-foreground" />
+          <span className={pct1on1 >= 100 ? "text-emerald-600 font-medium" : pct1on1 >= 50 ? "text-amber-600" : "text-destructive"}>
+            {kpi.oneOnOnes}/{metaTotal}
+          </span>
+        </div>
+        <div className="flex items-center gap-1" title={`Feedbacks no ano: ${kpi.feedbacks}`}>
+          <MessageSquare className="h-3 w-3 text-muted-foreground" />
+          <span>{kpi.feedbacks}</span>
+        </div>
+        <div className="flex items-center gap-1" title={`Ações abertas: ${kpi.acoesAbertas}`}>
+          <Target className="h-3 w-3 text-muted-foreground" />
+          <span>{kpi.acoesAbertas}</span>
+        </div>
+        <div className="flex items-center gap-1" title={`Conclusão: ${taxaConclusao}%`}>
+          <CheckCircle className="h-3 w-3 text-muted-foreground" />
+          <span>{taxaConclusao}%</span>
+        </div>
+      </div>
+    );
+  };
+
+  const ColabKpiRow = ({ colab }: { colab: Colab }) => {
+    const k = kpiMap.get(colab.id) || { oneOnOnes: 0, feedbacks: 0, acoesAbertas: 0, acoesConcluidas: 0, acoesTotal: 0 };
+    const pct1on1 = Math.round((k.oneOnOnes / META_1ON1_ANO) * 100);
+
+    return (
+      <div className="flex items-center justify-between py-1.5 ml-4 pl-4">
+        <div className="flex items-center gap-3">
+          <span className="w-4" />
+          <Avatar className="h-6 w-6">
+            {colab.foto_url && <AvatarImage src={colab.foto_url} />}
+            <AvatarFallback className="text-[8px]">{initials(colab.nome)}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <Link to={`/colaboradores/${colab.id}`} className="text-xs hover:underline block truncate">
+              {colab.nome}
+            </Link>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 text-xs shrink-0">
+          <span className={pct1on1 >= 100 ? "text-emerald-600" : pct1on1 > 0 ? "text-amber-600" : "text-muted-foreground"} title="1:1 no ano">
+            {k.oneOnOnes}/{META_1ON1_ANO}
+          </span>
+          <span title="Feedbacks">{k.feedbacks} fb</span>
+          <span title="Ações abertas">{k.acoesAbertas} ab</span>
+          <span title="Conclusão">{k.acoesTotal > 0 ? Math.round((k.acoesConcluidas / k.acoesTotal) * 100) : 0}%</span>
+        </div>
+      </div>
+    );
+  };
+
   const RenderNode = ({ node, depth = 0 }: { node: AreaNode; depth?: number }) => {
     const isExpanded = expandedAreas.has(node.lider.id);
-    const total = countAll(node);
-    const custo = custoAll(node);
+    const teamIds = collectTeamIds(node);
+    const total = teamIds.length;
     const hasChildren = node.subordinados.length > 0 || node.subLideres.length > 0;
 
     return (
@@ -146,16 +234,10 @@ export default function LiderancaResumo() {
               >
                 {node.lider.nome}
               </Link>
-              <span className="text-xs text-muted-foreground">{node.lider.cargo}</span>
+              <span className="text-xs text-muted-foreground">{node.lider.cargo} · {total} pessoas</span>
             </div>
           </div>
-          <div className="flex items-center gap-4 shrink-0">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Users className="h-3 w-3" />
-              <span>{total}</span>
-            </div>
-            <div className="text-xs font-medium w-28 text-right">{fmt(custo)}</div>
-          </div>
+          <KpiBar ids={teamIds} />
         </div>
 
         {isExpanded && (
@@ -164,25 +246,7 @@ export default function LiderancaResumo() {
               <RenderNode key={sl.lider.id} node={sl} depth={depth + 1} />
             ))}
             {node.subordinados.map((sub) => (
-              <div key={sub.id} className={`flex items-center justify-between py-1.5 ${depth > 0 ? "ml-4 pl-4" : "ml-4 pl-4"}`}>
-                <div className="flex items-center gap-3">
-                  <span className="w-4" />
-                  <Avatar className="h-6 w-6">
-                    {sub.foto_url && <AvatarImage src={sub.foto_url} />}
-                    <AvatarFallback className="text-[8px]">{initials(sub.nome)}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <Link
-                      to={`/colaboradores/${sub.id}`}
-                      className="text-xs hover:underline block truncate"
-                    >
-                      {sub.nome}
-                    </Link>
-                    <span className="text-[10px] text-muted-foreground">{sub.cargo} · {nivelLabel(sub.nivel_complexidade)}</span>
-                  </div>
-                </div>
-                <div className="text-xs text-muted-foreground w-28 text-right">{fmt(sub.custo_mensal)}</div>
-              </div>
+              <ColabKpiRow key={sub.id} colab={sub} />
             ))}
           </div>
         )}
@@ -192,13 +256,17 @@ export default function LiderancaResumo() {
 
   if (!leandro || areas.length === 0) return null;
 
-  const totalGeral = areas.reduce((s, a) => s + 1 + countAll(a), 0);
-  const custoGeral = leandro.custo_mensal + areas.reduce((s, a) => s + custoAll(a), 0);
+  const allTeamIds = areas.flatMap((a) => [a.lider.id, ...collectTeamIds(a)]);
+  const totalGeral = allTeamIds.length;
+  const kpiGeral = aggregateKpis(allTeamIds);
+  const metaGeral = totalGeral * META_1ON1_ANO;
+  const pctGeral = metaGeral > 0 ? Math.round((kpiGeral.oneOnOnes / metaGeral) * 100) : 0;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Visão por Liderança</CardTitle>
+        <p className="text-xs text-muted-foreground">Meta: {META_1ON1_ANO} 1:1 por colaborador/ano · Legenda: 1:1 | Feedbacks | Ações abertas | % Conclusão</p>
       </CardHeader>
       <CardContent>
         {/* Diretoria Adjunta header */}
@@ -212,17 +280,29 @@ export default function LiderancaResumo() {
               <Link to={`/colaboradores/${leandro.id}`} className="text-sm font-semibold hover:underline">
                 {leandro.nome}
               </Link>
-              <p className="text-xs text-muted-foreground">Diretoria Adjunta · {leandro.gerencia}</p>
+              <p className="text-xs text-muted-foreground">Diretoria Adjunta · {totalGeral} colaboradores</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <Badge variant="secondary" className="text-xs">
-              <Users className="h-3 w-3 mr-1" />{totalGeral} colaboradores
+          <div className="flex items-center gap-3">
+            <Badge variant={pctGeral >= 50 ? "secondary" : "destructive"} className="text-xs">
+              <Users2 className="h-3 w-3 mr-1" />1:1: {kpiGeral.oneOnOnes}/{metaGeral} ({pctGeral}%)
             </Badge>
             <Badge variant="outline" className="text-xs">
-              <DollarSign className="h-3 w-3 mr-1" />{fmt(custoGeral)}
+              <MessageSquare className="h-3 w-3 mr-1" />{kpiGeral.feedbacks} feedbacks
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              <Target className="h-3 w-3 mr-1" />{kpiGeral.acoesAbertas} ações abertas
             </Badge>
           </div>
+        </div>
+
+        {/* Progress bar for 1:1 meta */}
+        <div className="mb-4">
+          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+            <span>Progresso 1:1 no ano</span>
+            <span>{pctGeral}%</span>
+          </div>
+          <Progress value={Math.min(pctGeral, 100)} className="h-2" />
         </div>
 
         {/* Areas */}
