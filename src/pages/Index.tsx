@@ -60,8 +60,6 @@ export default function Index() {
   const [distNivel, setDistNivel] = useState<any[]>([]);
   const [distTrajetoria, setDistTrajetoria] = useState<any[]>([]);
   const [ausentes, setAusentes] = useState<any[]>([]);
-  const [periodosVencidos, setPeriodosVencidos] = useState(0);
-  const [periodosVencendo, setPeriodosVencendo] = useState(0);
   const [pctComOneOnOne, setPctComOneOnOne] = useState(0);
   const [feedbacksMes, setFeedbacksMes] = useState(0);
   const [acoesAbertas, setAcoesAbertas] = useState(0);
@@ -90,12 +88,6 @@ export default function Index() {
       setAusentes(all);
     });
 
-    // Load periodos stats
-    supabase.from("periodos_aquisitivos").select("status, data_limite_concessao").eq("desconsiderar_periodo", false).then(({ data }) => {
-      setPeriodosVencidos((data || []).filter((p) => p.status === "vencido").length);
-      const in60 = new Date(Date.now() + 60 * 86400000).toISOString().split("T")[0];
-      setPeriodosVencendo((data || []).filter((p) => p.status !== "vencido" && p.status !== "concluido" && p.data_limite_concessao <= in60 && p.data_limite_concessao >= today).length);
-    });
 
     // Feedback & 1:1 KPIs — only for direct reports (gestor_direto matches current user)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
