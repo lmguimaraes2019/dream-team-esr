@@ -436,21 +436,23 @@ export default function Index() {
             </CardContent>
           </Card>
 
-          {/* Charts row 3 - Pies */}
+          {/* Charts row 3 - Bars */}
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader><CardTitle className="text-base">Distribuição por Nível</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={250}>
-                  <PieChart className="text-xs">
-                    <Pie data={distNivel} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
+                  <BarChart data={distNivel} className="text-xs">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="value" name="Colaboradores" radius={[4, 4, 0, 0]}>
                       {distNivel.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend className="text-xs" />
-                  </PieChart>
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
@@ -458,15 +460,17 @@ export default function Index() {
               <CardHeader><CardTitle className="text-base">Distribuição por Trajetória</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={250}>
-                  <PieChart className="text-xs">
-                    <Pie data={distTrajetoria} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
+                  <BarChart data={distTrajetoria} className="text-xs">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="value" name="Colaboradores" radius={[4, 4, 0, 0]}>
                       {distTrajetoria.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend className="text-xs" />
-                  </PieChart>
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
