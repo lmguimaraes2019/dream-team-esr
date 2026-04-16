@@ -176,11 +176,11 @@ export default function LiderancaResumo() {
 
   const ColabKpiRow = ({ colab }: { colab: Colab }) => {
     const k = kpiMap.get(colab.id) || { oneOnOnes: 0, feedbacks: 0, acoesAbertas: 0, acoesConcluidas: 0, acoesTotal: 0 };
-    const pct1on1 = Math.round((k.oneOnOnes / META_1ON1_ANO) * 100);
+    const pct1on1 = Math.min(Math.round((k.oneOnOnes / META_1ON1_ANO) * 100), 100);
 
     return (
       <div className="flex items-center justify-between py-1.5 ml-4 pl-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <span className="w-4" />
           <Avatar className="h-6 w-6">
             {colab.foto_url && <AvatarImage src={colab.foto_url} />}
@@ -190,6 +190,17 @@ export default function LiderancaResumo() {
             <Link to={`/colaboradores/${colab.id}`} className="text-xs hover:underline block truncate">
               {colab.nome}
             </Link>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0" title={`Meta 1:1: ${k.oneOnOnes}/${META_1ON1_ANO} (${pct1on1}%)`}>
+            <div className="w-16 h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${pct1on1 >= 100 ? "bg-emerald-500" : pct1on1 >= 40 ? "bg-emerald-400" : pct1on1 > 0 ? "bg-amber-400" : "bg-muted"}`}
+                style={{ width: `${pct1on1}%` }}
+              />
+            </div>
+            <span className={`text-[10px] font-medium ${pct1on1 >= 100 ? "text-emerald-600" : pct1on1 > 0 ? "text-amber-600" : "text-muted-foreground"}`}>
+              {pct1on1}%
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-3 text-xs shrink-0">
