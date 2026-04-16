@@ -215,11 +215,32 @@ export default function LiderancaResumo() {
     );
   };
 
+  const ProgressMiniBar = ({ value, max, label, color }: { value: number; max: number; label: string; color: string }) => {
+    const pct = max > 0 ? Math.min(Math.round((value / max) * 100), 100) : 0;
+    return (
+      <div className="flex items-center gap-1.5" title={label}>
+        <span className="text-[10px] text-muted-foreground w-14 text-right truncate">{label.split(":")[0]}</span>
+        <div className="w-20 h-1.5 rounded-full bg-muted overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+        </div>
+        <span className={`text-[10px] font-medium ${pct >= 100 ? "text-emerald-600" : pct > 0 ? "text-amber-600" : "text-muted-foreground"}`}>
+          {value}/{max} ({pct}%)
+        </span>
+      </div>
+    );
+  };
+
   const RenderNode = ({ node, depth = 0 }: { node: AreaNode; depth?: number }) => {
     const isExpanded = expandedAreas.has(node.lider.id);
     const teamIds = collectTeamIds(node);
     const total = teamIds.length;
     const hasChildren = node.subordinados.length > 0 || node.subLideres.length > 0;
+
+    // Leader's own 1:1 (with their superior)
+    const liderKpi = kpiMap.get(node.lider.id) || { oneOnOnes: 0, feedbacks: 0, acoesAbertas: 0, acoesConcluidas: 0, acoesTotal: 0 };
+    // Team aggregate 1:1
+    const teamKpi = aggregateKpis(teamIds);
+    const metaTeam = teamIds.length * META_1ON1_ANO;
 
     return (
       <div className={depth > 0 ? "ml-4 border-l pl-4 border-border" : ""}>
@@ -246,6 +267,10 @@ export default function LiderancaResumo() {
                 {node.lider.nome}
               </Link>
               <span className="text-xs text-muted-foreground">{node.lider.cargo} · {total} pessoas</span>
+              <div className="flex flex-col gap-0.5 mt-1">
+                <ProgressMiniBar value={liderKpi.oneOnOnes} max={META_1ON1_ANO} label="Individual" color={liderKpi.oneOnOnes >= META_1ON1_ANO ? "bg-emerald-500" : "bg-emerald-400"} />
+                <ProgressMiniBar value={teamKpi.oneOnOnes} max={metaTeam} label="Equipe" color={teamKpi.oneOnOnes >= metaTeam ? "bg-emerald-500" : "bg-blue-400"} />
+              </div>
             </div>
           </div>
           <KpiBar ids={teamIds} />
