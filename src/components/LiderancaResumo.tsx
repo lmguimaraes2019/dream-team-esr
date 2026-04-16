@@ -298,6 +298,15 @@ export default function LiderancaResumo() {
   const metaGeral = totalGeral * META_1ON1_ANO;
   const pctGeral = metaGeral > 0 ? Math.round((kpiGeral.oneOnOnes / metaGeral) * 100) : 0;
 
+  // Individual: Leandro's own 1:1 + sum of direct reports' individual 1:1s
+  const leandroKpi = kpiMap.get(leandro.id) || { oneOnOnes: 0, feedbacks: 0, acoesAbertas: 0, acoesConcluidas: 0, acoesTotal: 0 };
+  const gestoresIds = areas.map((a) => a.lider.id);
+  const gestoresIndividualTotal = gestoresIds.reduce((sum, id) => {
+    const k = kpiMap.get(id);
+    return sum + (k ? k.oneOnOnes : 0);
+  }, 0) + leandroKpi.oneOnOnes;
+  const metaIndividual = (gestoresIds.length + 1) * META_1ON1_ANO; // gestores + Leandro
+
   return (
     <Card>
       <CardHeader>
@@ -317,6 +326,10 @@ export default function LiderancaResumo() {
                 {leandro.nome}
               </Link>
               <p className="text-xs text-muted-foreground">Diretoria Adjunta · {totalGeral} colaboradores</p>
+              <div className="flex flex-col gap-0.5 mt-1">
+                <ProgressMiniBar value={gestoresIndividualTotal} max={metaIndividual} label="Individual" color={gestoresIndividualTotal >= metaIndividual ? "bg-emerald-500" : "bg-emerald-400"} />
+                <ProgressMiniBar value={kpiGeral.oneOnOnes} max={metaGeral} label="Diretoria" color={kpiGeral.oneOnOnes >= metaGeral ? "bg-emerald-500" : "bg-blue-400"} />
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
