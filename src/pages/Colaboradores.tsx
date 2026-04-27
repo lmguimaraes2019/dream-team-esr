@@ -17,6 +17,7 @@ import { NIVEL_OPTIONS, nivelLabel } from "@/lib/nivelLabels";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useOrigensRecurso } from "@/hooks/useOrigensRecurso";
 import { useLideres } from "@/hooks/useLideres";
+import Organograma from "@/components/Organograma";
 
 type Colaborador = Tables<"colaboradores">;
 
@@ -121,6 +122,7 @@ export default function Colaboradores() {
 
   return (
     <div className="space-y-6">
+      <Organograma />
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Colaboradores</h1>
         {isAdmin && (
