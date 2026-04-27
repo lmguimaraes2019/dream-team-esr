@@ -97,18 +97,7 @@ export default function DescricaoCargoCard({ colaboradorId }: Props) {
 
             {grouped.length > 0 && (
               <Section title="Processos e Principais Responsabilidades">
-                <div className="space-y-3">
-                  {grouped.map((g, i) => (
-                    <div key={i} className="border-l-2 border-primary/40 pl-3">
-                      <h4 className="font-semibold mb-1">{g.processo}</h4>
-                      <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                        {g.itens.map((r, j) => (
-                          <li key={j} className="leading-relaxed">{r}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
+                <ProcessosAccordion grouped={grouped} />
               </Section>
             )}
 
