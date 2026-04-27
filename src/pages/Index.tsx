@@ -560,11 +560,22 @@ export default function Index() {
           <Card>
             <CardHeader><CardTitle className="text-base">Custo por Gerência (mensal)</CardTitle></CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={custoGerencia} layout="vertical" className="text-xs">
+              <ResponsiveContainer width="100%" height={Math.max(300, custoGerencia.length * 38)}>
+                <BarChart
+                  data={custoGerencia}
+                  layout="vertical"
+                  className="text-xs"
+                  margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                  <YAxis dataKey="gerencia" type="category" width={120} tick={{ fontSize: 12 }} />
+                  <YAxis
+                    dataKey="gerencia"
+                    type="category"
+                    width={220}
+                    tick={{ fontSize: 11 }}
+                    interval={0}
+                  />
                   <Tooltip formatter={(v: number) => fmt(v)} />
                   <Bar dataKey="custo" fill="hsl(30, 80%, 55%)" radius={[0, 4, 4, 0]} />
                 </BarChart>
