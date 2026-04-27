@@ -420,7 +420,7 @@ export default function DescricaoCargoEditDialog({ colaboradorId, open, onOpenCh
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar Descrição de Cargo</DialogTitle>
+          <DialogTitle>Editar descrição do cargo</DialogTitle>
         </DialogHeader>
 
         {/* Stepper */}
@@ -464,9 +464,21 @@ export default function DescricaoCargoEditDialog({ colaboradorId, open, onOpenCh
           {/* Step 1: Missão */}
           {step === 1 && (
             <div className="space-y-2">
-              <Label>Missão do Cargo</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Missão do Cargo</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Importar Missão, Processos e Responsabilidades de uma planilha"
+                >
+                  <Upload className="h-3 w-3 mr-1" /> Importar de planilha
+                </Button>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Descreva em poucas linhas o propósito principal deste cargo.
+                Descreva em poucas linhas o propósito principal deste cargo. Você também pode importar a Missão, Processos e Responsabilidades de uma planilha.
               </p>
               <Textarea rows={8} value={missao} onChange={(e) => setMissao(e.target.value)} placeholder="Ex.: Garantir a execução das atividades administrativas..." />
             </div>
