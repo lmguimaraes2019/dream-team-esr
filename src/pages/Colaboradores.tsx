@@ -307,10 +307,14 @@ export default function Colaboradores() {
               <TableHead>Cargo</TableHead>
               <TableHead>Nível de Complexidade</TableHead>
               <TableHead>Vínculo</TableHead>
+              <TableHead>Descrição de Cargo</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((c) => (
+            {filtered.map((c) => {
+              const m = mapeamento[c.id];
+              const temInfo = m && (m.processos > 0 || m.resps > 0);
+              return (
               <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/colaboradores/${c.id}`)}>
                 <TableCell className="font-medium">
                   <span className="flex items-center gap-2 flex-wrap">
