@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, DollarSign, TrendingUp, Users2, MessageSquare, Target, CheckCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Users, DollarSign, TrendingUp, Users2, MessageSquare, Target, CheckCircle, ListChecks } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { TIPO_LABELS, TIPO_COLORS, AusenciaBadge } from "@/components/AusenciasManager";
@@ -65,6 +68,8 @@ export default function Index() {
   const [feedbacksMes, setFeedbacksMes] = useState(0);
   const [acoesAbertas, setAcoesAbertas] = useState(0);
   const [taxaConclusao, setTaxaConclusao] = useState(0);
+  const [mapeamento, setMapeamento] = useState<{ id: string; nome: string; cargo: string; processos: number; responsabilidades: number }[]>([]);
+  const [mapBusca, setMapBusca] = useState("");
 
   useEffect(() => {
     supabase
@@ -132,6 +137,46 @@ export default function Index() {
       setTaxaConclusao(allAcoes.length > 0 ? Math.round((concluidas / allAcoes.length) * 100) : 0);
     };
     loadKpis();
+
+    // Load descrição de cargo mapping per colaborador
+    const loadMapeamento = async () => {
+      const { data: colabs } = await supabase
+        .from("colaboradores")
+        .select("id, nome, cargo")
+        .eq("ativo", true)
+        .order("nome");
+      const { data: descs } = await supabase
+        .from("descricao_cargo")
+        .select("id, colaborador_id");
+      const { data: resps } = await supabase
+        .from("descricao_cargo_responsabilidades")
+        .select("descricao_cargo_id, processo");
+
+      const descToColab = new Map<string, string>();
+      (descs || []).forEach((d: any) => descToColab.set(d.id, d.colaborador_id));
+      const colabAgg = new Map<string, { processos: Set<string>; total: number }>();
+      (resps || []).forEach((r: any) => {
+        const colabId = descToColab.get(r.descricao_cargo_id);
+        if (!colabId) return;
+        if (!colabAgg.has(colabId)) colabAgg.set(colabId, { processos: new Set(), total: 0 });
+        const agg = colabAgg.get(colabId)!;
+        if (r.processo) agg.processos.add(r.processo);
+        agg.total++;
+      });
+      setMapeamento(
+        (colabs || []).map((c: any) => {
+          const agg = colabAgg.get(c.id);
+          return {
+            id: c.id,
+            nome: c.nome,
+            cargo: c.cargo || "—",
+            processos: agg ? agg.processos.size : 0,
+            responsabilidades: agg ? agg.total : 0,
+          };
+        })
+      );
+    };
+    loadMapeamento();
   }, []);
 
   useEffect(() => {
@@ -344,6 +389,94 @@ export default function Index() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Mapeamento de Descrição de Cargo */}
+      {(() => {
+        const totalColabs = mapeamento.length;
+        const comProcessos = mapeamento.filter((m) => m.processos > 0).length;
+        const totalProcessos = mapeamento.reduce((s, m) => s + m.processos, 0);
+        const totalResp = mapeamento.reduce((s, m) => s + m.responsabilidades, 0);
+        const filtrado = mapeamento.filter((m) =>
+          mapBusca ? m.nome.toLowerCase().includes(mapBusca.toLowerCase()) : true
+        );
+        return (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div className="flex items-center gap-2">
+                <ListChecks className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Descrição de Cargo Mapeada</CardTitle>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">{comProcessos}/{totalColabs}</span> colaboradores
+                <span className="mx-2">·</span>
+                {totalProcessos} processos
+                <span className="mx-2">·</span>
+                {totalResp} responsabilidades
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="single" collapsible>
+                <AccordionItem value="map" className="border-b-0">
+                  <AccordionTrigger className="py-2 text-sm hover:no-underline">
+                    Ver detalhes por colaborador
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-3">
+                      <Input
+                        placeholder="Buscar colaborador..."
+                        value={mapBusca}
+                        onChange={(e) => setMapBusca(e.target.value)}
+                        className="max-w-sm"
+                      />
+                      <div className="border rounded-md">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Colaborador</TableHead>
+                              <TableHead>Cargo</TableHead>
+                              <TableHead className="text-right">Processos</TableHead>
+                              <TableHead className="text-right">Responsabilidades</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filtrado.map((m) => (
+                              <TableRow key={m.id}>
+                                <TableCell>
+                                  <Link to={`/colaboradores/${m.id}`} className="hover:underline font-medium">
+                                    {m.nome}
+                                  </Link>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">{m.cargo}</TableCell>
+                                <TableCell className="text-right">
+                                  <span className={m.processos === 0 ? "text-muted-foreground" : "font-semibold"}>
+                                    {m.processos}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <span className={m.responsabilidades === 0 ? "text-muted-foreground" : "font-semibold"}>
+                                    {m.responsabilidades}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            {filtrado.length === 0 && (
+                              <TableRow>
+                                <TableCell colSpan={4} className="text-center text-muted-foreground py-4">
+                                  Nenhum colaborador encontrado.
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       <LiderancaResumo />
 

@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Pencil } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import DescricaoCargoEditDialog, { DescricaoCargoData, Responsabilidade } from "./DescricaoCargoEditDialog";
@@ -96,18 +97,7 @@ export default function DescricaoCargoCard({ colaboradorId }: Props) {
 
             {grouped.length > 0 && (
               <Section title="Processos e Principais Responsabilidades">
-                <div className="space-y-3">
-                  {grouped.map((g, i) => (
-                    <div key={i} className="border-l-2 border-primary/40 pl-3">
-                      <h4 className="font-semibold mb-1">{g.processo}</h4>
-                      <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                        {g.itens.map((r, j) => (
-                          <li key={j} className="leading-relaxed">{r}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
+                <ProcessosAccordion grouped={grouped} />
               </Section>
             )}
 
@@ -161,6 +151,47 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <div>
       <h3 className="font-semibold text-sm border-b pb-1 mb-3">{title}</h3>
       {children}
+    </div>
+  );
+}
+
+function ProcessosAccordion({ grouped }: { grouped: { processo: string; itens: string[] }[] }) {
+  const allKeys = useMemo(() => grouped.map((_, i) => `p-${i}`), [grouped]);
+  const [openItems, setOpenItems] = useState<string[]>([]);
+  const allOpen = openItems.length === allKeys.length;
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-end">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs"
+          onClick={() => setOpenItems(allOpen ? [] : allKeys)}
+        >
+          {allOpen ? "Recolher todos" : "Expandir todos"}
+        </Button>
+      </div>
+      <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="w-full">
+        {grouped.map((g, i) => (
+          <AccordionItem key={i} value={`p-${i}`} className="border-l-2 border-primary/40 pl-3 border-b-0 mb-1">
+            <AccordionTrigger className="py-2 hover:no-underline">
+              <div className="flex items-center gap-2 text-left">
+                <span className="font-semibold">{g.processo}</span>
+                <span className="text-xs text-muted-foreground font-normal">
+                  ({g.itens.length} {g.itens.length === 1 ? "responsabilidade" : "responsabilidades"})
+                </span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                {g.itens.map((r, j) => (
+                  <li key={j} className="leading-relaxed">{r}</li>
+                ))}
+              </ul>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
     </div>
   );
 }

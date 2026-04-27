@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Movimentacao {
   id: string;
@@ -31,6 +31,7 @@ export default function MovimentacoesCarreiraCard({ colaboradorId }: { colaborad
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [expanded, setExpanded] = useState(false);
   const { isAdmin } = useAuth();
   const { toast } = useToast();
 
@@ -113,53 +114,66 @@ export default function MovimentacoesCarreiraCard({ colaboradorId }: { colaborad
         {movs.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">Nenhuma movimentação registrada.</p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Cargo</TableHead>
-                <TableHead>Salário</TableHead>
-                <TableHead>Nível</TableHead>
-                <TableHead>Grupo</TableHead>
-                {isAdmin && <TableHead></TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {movs.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell>{new Date(m.data + "T00:00:00").toLocaleDateString("pt-BR")}</TableCell>
-                  <TableCell>{m.tipo_movimentacao}</TableCell>
-                  <TableCell>{m.cargo || "—"}</TableCell>
-                  <TableCell>{m.salario != null ? fmt(m.salario) : "—"}</TableCell>
-                  <TableCell>{m.nivel || "—"}</TableCell>
-                  <TableCell>{m.grupo || "—"}</TableCell>
-                  {isAdmin && (
-                    <TableCell className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(m)}>
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm"><Trash2 className="h-3 w-3" /></Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Excluir movimentação?</AlertDialogTitle>
-                            <AlertDialogDescription>Esta ação é irreversível.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(m.id)}>Excluir</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  )}
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Cargo</TableHead>
+                  <TableHead>Salário</TableHead>
+                  <TableHead>Nível</TableHead>
+                  <TableHead>Grupo</TableHead>
+                  {isAdmin && <TableHead></TableHead>}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {(expanded ? movs : movs.slice(0, 2)).map((m) => (
+                  <TableRow key={m.id}>
+                    <TableCell>{new Date(m.data + "T00:00:00").toLocaleDateString("pt-BR")}</TableCell>
+                    <TableCell>{m.tipo_movimentacao}</TableCell>
+                    <TableCell>{m.cargo || "—"}</TableCell>
+                    <TableCell>{m.salario != null ? fmt(m.salario) : "—"}</TableCell>
+                    <TableCell>{m.nivel || "—"}</TableCell>
+                    <TableCell>{m.grupo || "—"}</TableCell>
+                    {isAdmin && (
+                      <TableCell className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(m)}>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm"><Trash2 className="h-3 w-3" /></Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir movimentação?</AlertDialogTitle>
+                              <AlertDialogDescription>Esta ação é irreversível.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(m.id)}>Excluir</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {movs.length > 2 && (
+              <div className="flex justify-center mt-2">
+                <Button variant="ghost" size="sm" onClick={() => setExpanded((v) => !v)}>
+                  {expanded ? (
+                    <><ChevronUp className="mr-1 h-4 w-4" /> Recolher</>
+                  ) : (
+                    <><ChevronDown className="mr-1 h-4 w-4" /> Ver mais {movs.length - 2} movimentaç{movs.length - 2 === 1 ? "ão" : "ões"}</>
+                  )}
+                </Button>
+              </div>
+            )}
+          </>
         )}
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
