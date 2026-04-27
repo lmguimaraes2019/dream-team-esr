@@ -137,6 +137,46 @@ export default function Index() {
       setTaxaConclusao(allAcoes.length > 0 ? Math.round((concluidas / allAcoes.length) * 100) : 0);
     };
     loadKpis();
+
+    // Load descrição de cargo mapping per colaborador
+    const loadMapeamento = async () => {
+      const { data: colabs } = await supabase
+        .from("colaboradores")
+        .select("id, nome, cargo")
+        .eq("ativo", true)
+        .order("nome");
+      const { data: descs } = await supabase
+        .from("descricao_cargo")
+        .select("id, colaborador_id");
+      const { data: resps } = await supabase
+        .from("descricao_cargo_responsabilidades")
+        .select("descricao_cargo_id, processo");
+
+      const descToColab = new Map<string, string>();
+      (descs || []).forEach((d: any) => descToColab.set(d.id, d.colaborador_id));
+      const colabAgg = new Map<string, { processos: Set<string>; total: number }>();
+      (resps || []).forEach((r: any) => {
+        const colabId = descToColab.get(r.descricao_cargo_id);
+        if (!colabId) return;
+        if (!colabAgg.has(colabId)) colabAgg.set(colabId, { processos: new Set(), total: 0 });
+        const agg = colabAgg.get(colabId)!;
+        if (r.processo) agg.processos.add(r.processo);
+        agg.total++;
+      });
+      setMapeamento(
+        (colabs || []).map((c: any) => {
+          const agg = colabAgg.get(c.id);
+          return {
+            id: c.id,
+            nome: c.nome,
+            cargo: c.cargo || "—",
+            processos: agg ? agg.processos.size : 0,
+            responsabilidades: agg ? agg.total : 0,
+          };
+        })
+      );
+    };
+    loadMapeamento();
   }, []);
 
   useEffect(() => {
