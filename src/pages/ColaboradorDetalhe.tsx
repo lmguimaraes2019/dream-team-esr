@@ -16,6 +16,7 @@ import SalaryRangeRuler from "@/components/SalaryRangeRuler";
 import ColaboradorFerias from "@/components/ferias/ColaboradorFerias";
 import ColaboradorFeedback1on1 from "@/components/feedback/ColaboradorFeedback1on1";
 import MovimentacoesCarreiraCard from "@/components/MovimentacoesCarreiraCard";
+import DescricaoCargoCard from "@/components/DescricaoCargoCard";
 import { useToast } from "@/hooks/use-toast";
 
 type Colaborador = Tables<"colaboradores">;
