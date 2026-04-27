@@ -193,16 +193,13 @@ export default function DescricaoCargoEditDialog({ colaboradorId, open, onOpenCh
         if (firstImportedIdx >= 0) setSelectedIdx(firstImportedIdx);
         return next;
       });
-      // Importar missão se não preenchida ainda
+      // Importar missão (sempre sobrescreve com o conteúdo da planilha quando presente)
       let missaoMsg = "";
       if (missaoImportada) {
-        setMissao((m) => {
-          if (!m.trim()) {
-            missaoMsg = " · Missão preenchida";
-            return missaoImportada;
-          }
-          return m;
-        });
+        setMissao(missaoImportada);
+        missaoMsg = " · Missão atualizada";
+      } else {
+        missaoMsg = " · Missão não encontrada na planilha";
       }
       toast({
         title: "Importação concluída",
