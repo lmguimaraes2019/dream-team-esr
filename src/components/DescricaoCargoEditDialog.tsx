@@ -420,7 +420,7 @@ export default function DescricaoCargoEditDialog({ colaboradorId, open, onOpenCh
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar Descrição de Cargo</DialogTitle>
+          <DialogTitle>Editar descrição do cargo</DialogTitle>
         </DialogHeader>
 
         {/* Stepper */}
