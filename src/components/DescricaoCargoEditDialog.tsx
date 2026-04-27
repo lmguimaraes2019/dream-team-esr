@@ -480,7 +480,7 @@ export default function DescricaoCargoEditDialog({ colaboradorId, open, onOpenCh
                 <div className="p-2 border-b flex items-center justify-between bg-muted/30 gap-2">
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Processos</span>
                   <div className="flex items-center gap-1">
-                    <Button type="button" size="sm" variant="ghost" className="h-7" onClick={() => fileInputRef.current?.click()} title="Importar de planilha">
+                    <Button type="button" size="sm" variant="ghost" className="h-7" onClick={() => fileInputRef.current?.click()} title="Importar Missão, Processos e Responsabilidades de uma planilha">
                       <Upload className="h-3 w-3 mr-1" /> Importar
                     </Button>
                     <Button type="button" size="sm" variant="ghost" className="h-7" onClick={addGroup}>
