@@ -1,70 +1,54 @@
 ## Objetivo
 
-Permitir cadastrar a **Descrição de Cargo** de cada colaborador (no modelo da planilha anexa "Analista Acadêmico - Conteúdo Pl"), exibida e editada em uma nova aba dentro da página de detalhes do colaborador.
+Transformar o atual diálogo único de edição de **Descrição de Cargo** em uma **jornada por etapas (wizard)**, dando destaque e ergonomia à entrada de **Processos** e **Principais Responsabilidades**, que hoje é a parte mais trabalhosa do cadastro.
 
-## Estrutura da Descrição de Cargo
+## Como ficará a jornada
 
-Baseada na planilha:
-- **Missão do Cargo** (texto longo)
-- **Processos + Principais Responsabilidades** (lista de pares: nome do processo + responsabilidade. Um processo pode ter várias responsabilidades, ex.: "Produção de Conteúdo" tem 6 itens)
-- **Características do Cargo**
-  - Formação acadêmica mínima (texto)
-  - Formação acadêmica desejável (texto)
-- **Competências Desejáveis** (lista ordenada de até ~10 itens)
+O diálogo `DescricaoCargoEditDialog` passará a ter um cabeçalho com indicador de etapas (stepper) e botões "Voltar / Próximo / Salvar" no rodapé.
 
-Os campos cabeçalho (Cargo, Trajetória, Família, Diretoria, Nível) já existem na tabela `colaboradores` e serão apenas exibidos no topo da aba — não duplicados.
+Etapas:
 
-## Mudanças no banco
+1. **Missão do Cargo** — apenas o textarea da missão, com texto de apoio.
+2. **Processos e Responsabilidades** *(etapa principal, redesenhada)*
+3. **Formação Acadêmica** — mínima e desejável, lado a lado.
+4. **Competências Desejáveis** — lista numerada.
+5. **Revisão** — resumo somente leitura de tudo que foi preenchido + botão "Salvar".
 
-Criar duas tabelas no Supabase (com RLS):
+O usuário pode navegar livremente entre etapas (clicar no stepper) sem perder dados; o salvamento só acontece na etapa final (mesma lógica atual de upsert).
 
-1. **`descricao_cargo`** (1 registro por colaborador)
-   - `id` uuid PK
-   - `colaborador_id` uuid (unique)
-   - `missao` text
-   - `formacao_minima` text
-   - `formacao_desejavel` text
-   - `competencias` text[] (array ordenado)
-   - `created_at`, `updated_at`
+## Foco: etapa de Processos e Responsabilidades
 
-2. **`descricao_cargo_responsabilidades`** (N por descrição)
-   - `id` uuid PK
-   - `descricao_cargo_id` uuid
-   - `processo` text
-   - `responsabilidade` text
-   - `ordem` int
-   - `created_at`
+Hoje cada processo é um bloco com lista de itens dentro. A etapa será reorganizada para ficar mais fluida:
 
-RLS:
-- SELECT: authenticated (igual às demais tabelas de leitura)
-- ALL: admins e gestores (mesmo padrão de `feedback` / `one_on_one`)
+- **Painel esquerdo (lista de processos)**: lista vertical compacta com o nome de cada processo, contador de responsabilidades (`3 itens`), botão "+ Adicionar processo" no topo, e setas para reordenar / ícone de excluir ao passar o mouse. O processo selecionado fica destacado.
+- **Painel direito (detalhe do processo selecionado)**:
+  - Campo "Nome do processo" no topo.
+  - Lista numerada de **Principais Responsabilidades** com:
+    - Textarea por item (auto-resize, 2 linhas iniciais).
+    - Atalho **Enter no fim do último item cria um novo item automaticamente**, e Backspace em item vazio remove.
+    - Setas ↑ ↓ e ✕ por linha.
+    - Botão "+ Adicionar responsabilidade" ao final.
+  - Em telas estreitas (< 768px) os dois painéis empilham (lista colapsa em accordion).
 
-Trigger `update_updated_at_column` em `descricao_cargo`.
+Comportamentos que reduzem cliques:
+- Ao adicionar um novo processo, ele já vem selecionado e com **uma responsabilidade vazia em foco**.
+- Itens 100% vazios são descartados automaticamente ao salvar (já é o comportamento atual).
+- Indicador no stepper mostra `Processos (3)` para dar visibilidade do quanto já foi preenchido.
 
-## Mudanças no frontend
+## Arquivos afetados
 
-### Nova aba "Descrição de Cargo" em `src/pages/ColaboradorDetalhe.tsx`
-Hoje a página usa Cards empilhados sem Tabs. Vou converter as seções já existentes (Dados Gerais / Contrato / Estrutura / Movimentações / Custos) para um layout com `Tabs`, adicionando a nova aba **"Descrição de Cargo"**. Conteúdo atual permanece intacto, só agrupado.
+- `src/components/DescricaoCargoEditDialog.tsx` — refatoração principal: introdução do stepper, separação do conteúdo em sub-componentes internos por etapa, novo layout dois-painéis para Processos/Responsabilidades, atalhos de teclado.
+- Sem mudanças em banco de dados, RLS, tipos ou no `DescricaoCargoCard.tsx` (a estrutura de dados salva continua idêntica: linhas em `descricao_cargo_responsabilidades` com `processo`, `responsabilidade`, `ordem`).
 
-### Novo componente `src/components/DescricaoCargoCard.tsx`
-- Modo visualização: mostra missão, agrupa responsabilidades por processo, características e lista numerada de competências (igual layout da planilha).
-- Botão **Editar** (visível para admin/gestor) abre formulário inline:
-  - Textarea para missão, formação mínima e desejável
-  - Editor dinâmico de processos: adicionar/remover processo, e dentro dele adicionar/remover responsabilidades (com reordenação simples)
-  - Editor de competências: lista ordenada com adicionar/remover/mover
-- Salva via upsert em `descricao_cargo` + replace nas linhas de `descricao_cargo_responsabilidades`.
+## Detalhes técnicos
 
-### (Opcional, sugerido) Importação a partir do template Excel
-Adicionar botão **"Importar do Excel"** no card que aceita o mesmo layout da planilha anexa e popula automaticamente os campos. Útil para carregar várias descrições já existentes. Posso incluir agora ou deixar para uma segunda etapa — me avise.
+- Estado novo: `step: 1..5` e `selectedProcessoIdx: number | null`. Demais estados (`missao`, `groups`, `competencias`, `formacaoMinima`, `formacaoDesejavel`) permanecem.
+- Stepper: implementado com componentes existentes (`Button` ghost + separadores) — sem nova dependência.
+- Atalho Enter: `onKeyDown` no textarea da última responsabilidade chama `addItem(gi)` e foca o novo via `ref` + `useEffect`.
+- Validação leve antes de avançar da etapa 2: avisar (toast) se algum processo estiver sem nome ou sem nenhuma responsabilidade preenchida — sem bloquear, apenas alertando.
+- `handleSave` permanece o mesmo (chamado no botão "Salvar" da etapa 5).
 
-## Arquivos a editar/criar
+## Fora do escopo
 
-- (migração SQL) criar `descricao_cargo` e `descricao_cargo_responsabilidades` + RLS + trigger
-- novo: `src/components/DescricaoCargoCard.tsx`
-- novo: `src/components/DescricaoCargoEditDialog.tsx` (formulário de edição)
-- editar: `src/pages/ColaboradorDetalhe.tsx` — envolver seções em `Tabs` e incluir a nova aba
-
-## Permissões
-
-- Visualização: qualquer usuário autenticado.
-- Edição: admin e gestor (mesmo padrão usado em feedback/1on1).
+- Importação por Excel (continua pendente como possível próxima etapa).
+- Mudanças no card de visualização.
