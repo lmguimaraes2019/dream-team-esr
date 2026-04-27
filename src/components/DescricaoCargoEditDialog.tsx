@@ -137,18 +137,27 @@ export default function DescricaoCargoEditDialog({ colaboradorId, open, onOpenCh
       const wb = XLSX.read(buf, { type: "array" });
       let imported: ProcessoGroup[] = [];
       let totalItens = 0;
+      let missaoImportada = "";
       for (const sheetName of wb.SheetNames) {
         const sheet = wb.Sheets[sheetName];
         const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
         const found = findHeaderIndices(rows);
         if (!found) continue;
         const { headerRow, processoCol, respCol } = found;
+        if (!missaoImportada) missaoImportada = findMissao(rows);
         let lastProcesso = "";
         for (let i = headerRow + 1; i < rows.length; i++) {
           const row = rows[i] || [];
-          const proc = String(row[processoCol] ?? "").trim();
-          const resp = String(row[respCol] ?? "").trim();
+          const proc = cleanCell(row[processoCol]);
+          const resp = cleanCell(row[respCol]);
           if (proc) lastProcesso = proc;
+          // Stop if we hit another section header (e.g., "Características do Cargo", "Formação...")
+          const restoTexto = row.map(cleanCell).filter(Boolean).join(" ").toLowerCase();
+          if (!resp && !proc && restoTexto && /caracteristicas|formacao|competenc/i.test(
+            restoTexto.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          )) {
+            break;
+          }
           if (!resp) continue;
           const procName = lastProcesso || "Sem nome";
           const last = imported[imported.length - 1];
@@ -180,14 +189,24 @@ export default function DescricaoCargoEditDialog({ colaboradorId, open, onOpenCh
             next.push(g);
           }
         }
-        // Auto-select first imported
         const firstImportedIdx = next.findIndex((x) => norm(x.processo) === norm(imported[0].processo));
         if (firstImportedIdx >= 0) setSelectedIdx(firstImportedIdx);
         return next;
       });
+      // Importar missão se não preenchida ainda
+      let missaoMsg = "";
+      if (missaoImportada) {
+        setMissao((m) => {
+          if (!m.trim()) {
+            missaoMsg = " · Missão preenchida";
+            return missaoImportada;
+          }
+          return m;
+        });
+      }
       toast({
         title: "Importação concluída",
-        description: `${imported.length} processo(s) e ${totalItens} responsabilidade(s) importados.`,
+        description: `${imported.length} processo(s) e ${totalItens} responsabilidade(s) importados.${missaoMsg}`,
       });
     } catch (e: any) {
       toast({ title: "Erro ao ler planilha", description: e.message, variant: "destructive" });
