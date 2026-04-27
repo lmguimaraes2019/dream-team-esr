@@ -249,6 +249,74 @@ export type Database = {
           },
         ]
       }
+      descricao_cargo: {
+        Row: {
+          colaborador_id: string
+          competencias: string[]
+          created_at: string
+          formacao_desejavel: string | null
+          formacao_minima: string | null
+          id: string
+          missao: string | null
+          updated_at: string
+        }
+        Insert: {
+          colaborador_id: string
+          competencias?: string[]
+          created_at?: string
+          formacao_desejavel?: string | null
+          formacao_minima?: string | null
+          id?: string
+          missao?: string | null
+          updated_at?: string
+        }
+        Update: {
+          colaborador_id?: string
+          competencias?: string[]
+          created_at?: string
+          formacao_desejavel?: string | null
+          formacao_minima?: string | null
+          id?: string
+          missao?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      descricao_cargo_responsabilidades: {
+        Row: {
+          created_at: string
+          descricao_cargo_id: string
+          id: string
+          ordem: number
+          processo: string
+          responsabilidade: string
+        }
+        Insert: {
+          created_at?: string
+          descricao_cargo_id: string
+          id?: string
+          ordem?: number
+          processo: string
+          responsabilidade: string
+        }
+        Update: {
+          created_at?: string
+          descricao_cargo_id?: string
+          id?: string
+          ordem?: number
+          processo?: string
+          responsabilidade?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "descricao_cargo_responsabilidades_descricao_cargo_id_fkey"
+            columns: ["descricao_cargo_id"]
+            isOneToOne: false
+            referencedRelation: "descricao_cargo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       desenvolvimento_acoes: {
         Row: {
           colaborador_id: string

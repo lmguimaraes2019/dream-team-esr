@@ -1,67 +1,70 @@
+## Objetivo
 
+Permitir cadastrar a **Descrição de Cargo** de cada colaborador (no modelo da planilha anexa "Analista Acadêmico - Conteúdo Pl"), exibida e editada em uma nova aba dentro da página de detalhes do colaborador.
 
-# Movimentações de Carreira — Importação, CRUD e Exibição
+## Estrutura da Descrição de Cargo
 
-## Resumo
-Criar tabela `movimentacoes_carreira`, componente de importação na página de Configurações, CRUD manual (adicionar/editar/excluir movimentações) na página de detalhe do colaborador, e exibir "tempo desde última movimentação" e "tipo da última movimentação" nos Dados Gerais.
+Baseada na planilha:
+- **Missão do Cargo** (texto longo)
+- **Processos + Principais Responsabilidades** (lista de pares: nome do processo + responsabilidade. Um processo pode ter várias responsabilidades, ex.: "Produção de Conteúdo" tem 6 itens)
+- **Características do Cargo**
+  - Formação acadêmica mínima (texto)
+  - Formação acadêmica desejável (texto)
+- **Competências Desejáveis** (lista ordenada de até ~10 itens)
 
-## 1. Migração SQL — Nova tabela
+Os campos cabeçalho (Cargo, Trajetória, Família, Diretoria, Nível) já existem na tabela `colaboradores` e serão apenas exibidos no topo da aba — não duplicados.
 
-```sql
-CREATE TABLE public.movimentacoes_carreira (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  colaborador_id uuid NOT NULL,
-  data date NOT NULL,
-  tipo_movimentacao text NOT NULL,
-  cargo text,
-  salario numeric,
-  trajetoria text,
-  nivel text,
-  grupo text,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-ALTER TABLE public.movimentacoes_carreira ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Admins can manage movimentacoes" ON public.movimentacoes_carreira
-  FOR ALL TO authenticated USING (has_role(auth.uid(), 'admin'));
-CREATE POLICY "Auth can view movimentacoes" ON public.movimentacoes_carreira
-  FOR SELECT TO authenticated USING (true);
-CREATE UNIQUE INDEX idx_movimentacoes_unique 
-  ON public.movimentacoes_carreira (colaborador_id, data, tipo_movimentacao);
-```
+## Mudanças no banco
 
-## 2. Componente de importação — `MovimentacoesCarreiraImport.tsx`
+Criar duas tabelas no Supabase (com RLS):
 
-Novo componente em `src/components/MovimentacoesCarreiraImport.tsx`:
-- Upload XLSX, parse com `xlsx`
-- Detectar linhas-cabeçalho (matrícula curta em col A, nome em col B) vs linhas de movimentação (data em col A, tipo em col B)
-- Match colaborador por matrícula no banco
-- Preview com badge match/não encontrado
-- Upsert em `movimentacoes_carreira` (usando `colaborador_id + data + tipo_movimentacao` para evitar duplicatas)
-- Botão limpar importação anterior
+1. **`descricao_cargo`** (1 registro por colaborador)
+   - `id` uuid PK
+   - `colaborador_id` uuid (unique)
+   - `missao` text
+   - `formacao_minima` text
+   - `formacao_desejavel` text
+   - `competencias` text[] (array ordenado)
+   - `created_at`, `updated_at`
 
-## 3. Card na página de Configurações
+2. **`descricao_cargo_responsabilidades`** (N por descrição)
+   - `id` uuid PK
+   - `descricao_cargo_id` uuid
+   - `processo` text
+   - `responsabilidade` text
+   - `ordem` int
+   - `created_at`
 
-Adicionar card "Movimentações de Carreira" em `src/pages/Configuracoes.tsx` com o componente de importação.
+RLS:
+- SELECT: authenticated (igual às demais tabelas de leitura)
+- ALL: admins e gestores (mesmo padrão de `feedback` / `one_on_one`)
 
-## 4. Exibir na página de detalhe do colaborador
+Trigger `update_updated_at_column` em `descricao_cargo`.
 
-Em `src/pages/ColaboradorDetalhe.tsx`, no card "Dados Gerais":
-- Buscar movimentação mais recente de `movimentacoes_carreira` para o colaborador
-- Após "Tempo de Casa", exibir:
-  - **Última Movimentação**: tipo (ex: "DISSÍDIO") + tempo desde ela (ex: "1 ano e 3 meses")
+## Mudanças no frontend
 
-## 5. CRUD de movimentações na página do colaborador
+### Nova aba "Descrição de Cargo" em `src/pages/ColaboradorDetalhe.tsx`
+Hoje a página usa Cards empilhados sem Tabs. Vou converter as seções já existentes (Dados Gerais / Contrato / Estrutura / Movimentações / Custos) para um layout com `Tabs`, adicionando a nova aba **"Descrição de Cargo"**. Conteúdo atual permanece intacto, só agrupado.
 
-Novo card "Histórico de Movimentações" em `ColaboradorDetalhe.tsx`:
-- Tabela com colunas: Data, Tipo, Cargo, Salário, Nível, Grupo
-- Botão "Adicionar Movimentação" (admin) abre dialog com form
-- Botão editar em cada linha (admin) abre dialog preenchido
-- Botão excluir com confirmação (admin)
-- Dialog com campos: data, tipo_movimentacao (input text), cargo, salário, trajetória, nível, grupo
+### Novo componente `src/components/DescricaoCargoCard.tsx`
+- Modo visualização: mostra missão, agrupa responsabilidades por processo, características e lista numerada de competências (igual layout da planilha).
+- Botão **Editar** (visível para admin/gestor) abre formulário inline:
+  - Textarea para missão, formação mínima e desejável
+  - Editor dinâmico de processos: adicionar/remover processo, e dentro dele adicionar/remover responsabilidades (com reordenação simples)
+  - Editor de competências: lista ordenada com adicionar/remover/mover
+- Salva via upsert em `descricao_cargo` + replace nas linhas de `descricao_cargo_responsabilidades`.
 
-## Detalhes técnicos
+### (Opcional, sugerido) Importação a partir do template Excel
+Adicionar botão **"Importar do Excel"** no card que aceita o mesmo layout da planilha anexa e popula automaticamente os campos. Útil para carregar várias descrições já existentes. Posso incluir agora ou deixar para uma segunda etapa — me avise.
 
-- Parsing da planilha: col A numérica curta (< 999999 e não é data) = cabeçalho do colaborador; col A com formato data = movimentação
-- Salários no formato americano com vírgula como separador de milhar
-- O componente de CRUD será extraído em `src/components/MovimentacoesCarreiraCard.tsx` para manter o arquivo de detalhe organizado
+## Arquivos a editar/criar
 
+- (migração SQL) criar `descricao_cargo` e `descricao_cargo_responsabilidades` + RLS + trigger
+- novo: `src/components/DescricaoCargoCard.tsx`
+- novo: `src/components/DescricaoCargoEditDialog.tsx` (formulário de edição)
+- editar: `src/pages/ColaboradorDetalhe.tsx` — envolver seções em `Tabs` e incluir a nova aba
+
+## Permissões
+
+- Visualização: qualquer usuário autenticado.
+- Edição: admin e gestor (mesmo padrão usado em feedback/1on1).
