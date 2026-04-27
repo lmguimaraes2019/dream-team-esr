@@ -423,6 +423,17 @@ export default function DescricaoCargoEditDialog({ colaboradorId, open, onOpenCh
           <DialogTitle>Editar descrição do cargo</DialogTitle>
         </DialogHeader>
 
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleImportFile(f);
+          }}
+        />
+
         {/* Stepper */}
         <div className="flex items-center gap-1 sm:gap-2 border-b pb-3 overflow-x-auto">
           {STEPS.map((s, idx) => {
