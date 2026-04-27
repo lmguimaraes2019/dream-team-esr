@@ -26,7 +26,7 @@ const RESP_HEADERS = [
 ];
 
 function findHeaderIndices(rows: any[][]): { headerRow: number; processoCol: number; respCol: number } | null {
-  const max = Math.min(rows.length, 20);
+  const max = Math.min(rows.length, 40);
   for (let r = 0; r < max; r++) {
     const row = rows[r] || [];
     let pCol = -1, rCol = -1;
@@ -39,6 +39,28 @@ function findHeaderIndices(rows: any[][]): { headerRow: number; processoCol: num
   }
   return null;
 }
+
+function findMissao(rows: any[][]): string {
+  const max = Math.min(rows.length, 40);
+  for (let r = 0; r < max; r++) {
+    const row = rows[r] || [];
+    for (let c = 0; c < row.length; c++) {
+      if (norm(row[c]) === "missao do cargo") {
+        // Look at next non-empty row, same or next column
+        for (let r2 = r + 1; r2 < Math.min(r + 5, rows.length); r2++) {
+          const next = rows[r2] || [];
+          for (let c2 = 0; c2 < next.length; c2++) {
+            const v = String(next[c2] ?? "").replace(/\u00a0/g, " ").trim();
+            if (v && norm(v) !== "missao do cargo") return v;
+          }
+        }
+      }
+    }
+  }
+  return "";
+}
+
+const cleanCell = (v: any) => String(v ?? "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 
 export type Responsabilidade = { processo: string; responsabilidade: string };
 
