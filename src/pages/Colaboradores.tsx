@@ -336,11 +336,22 @@ export default function Colaboradores() {
                 <TableCell>{c.cargo}</TableCell>
                 <TableCell><Badge variant="secondary">{nivelLabel(c.nivel_complexidade)}</Badge></TableCell>
                 <TableCell><Badge variant={c.tipo_vinculo === "clt" ? "default" : "outline"}>{c.tipo_vinculo.toUpperCase()}</Badge></TableCell>
+                <TableCell>
+                  {temInfo ? (
+                    <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs whitespace-nowrap">
+                      {m!.processos} proc. · {m!.resps} resp.
+                      {m!.data && ` · ${new Date(m!.data).toLocaleDateString("pt-BR")}`}
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-red-100 text-red-700 border border-red-300 text-xs">Não mapeado</Badge>
+                  )}
+                </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum colaborador encontrado.</TableCell>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum colaborador encontrado.</TableCell>
               </TableRow>
             )}
           </TableBody>
