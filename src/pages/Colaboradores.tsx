@@ -24,6 +24,7 @@ export default function Colaboradores() {
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [ausenciasAtivas, setAusenciasAtivas] = useState<Record<string, string>>({});
   const [semFerias, setSemFerias] = useState<Set<string>>(new Set());
+  const [mapeamento, setMapeamento] = useState<Record<string, { processos: number; resps: number; data: string | null }>>({});
   const [search, setSearch] = useState("");
   const [filtroGerencia, setFiltroGerencia] = useState("all");
   const [filtroNivel, setFiltroNivel] = useState("all");
@@ -67,6 +68,20 @@ export default function Colaboradores() {
       (data || []).filter((c) => c.tipo_vinculo === "clt" && !idsComFerias.has(c.id)).map((c) => c.id)
     );
     setSemFerias(cltSemFerias);
+
+    // Mapeamento de descrição de cargo (processos + responsabilidades)
+    const { data: descs } = await supabase
+      .from("descricao_cargo")
+      .select("id, colaborador_id, created_at, descricao_cargo_responsabilidades(processo, created_at)");
+    const mapDesc: Record<string, { processos: number; resps: number; data: string | null }> = {};
+    (descs || []).forEach((d: any) => {
+      const resps = d.descricao_cargo_responsabilidades || [];
+      const processos = new Set(resps.map((r: any) => (r.processo || "").trim()).filter(Boolean)).size;
+      const datas = resps.map((r: any) => r.created_at).filter(Boolean);
+      const dataMaisRecente = datas.length ? datas.sort().slice(-1)[0] : d.created_at;
+      mapDesc[d.colaborador_id] = { processos, resps: resps.length, data: dataMaisRecente };
+    });
+    setMapeamento(mapDesc);
   };
 
   useEffect(() => { load(); }, []);
@@ -292,10 +307,14 @@ export default function Colaboradores() {
               <TableHead>Cargo</TableHead>
               <TableHead>Nível de Complexidade</TableHead>
               <TableHead>Vínculo</TableHead>
+              <TableHead>Descrição de Cargo</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((c) => (
+            {filtered.map((c) => {
+              const m = mapeamento[c.id];
+              const temInfo = m && (m.processos > 0 || m.resps > 0);
+              return (
               <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/colaboradores/${c.id}`)}>
                 <TableCell className="font-medium">
                   <span className="flex items-center gap-2 flex-wrap">
@@ -317,11 +336,22 @@ export default function Colaboradores() {
                 <TableCell>{c.cargo}</TableCell>
                 <TableCell><Badge variant="secondary">{nivelLabel(c.nivel_complexidade)}</Badge></TableCell>
                 <TableCell><Badge variant={c.tipo_vinculo === "clt" ? "default" : "outline"}>{c.tipo_vinculo.toUpperCase()}</Badge></TableCell>
+                <TableCell>
+                  {temInfo ? (
+                    <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs whitespace-nowrap">
+                      {m!.processos} proc. · {m!.resps} resp.
+                      {m!.data && ` · ${new Date(m!.data).toLocaleDateString("pt-BR")}`}
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-red-100 text-red-700 border border-red-300 text-xs">Não mapeado</Badge>
+                  )}
+                </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum colaborador encontrado.</TableCell>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum colaborador encontrado.</TableCell>
               </TableRow>
             )}
           </TableBody>
