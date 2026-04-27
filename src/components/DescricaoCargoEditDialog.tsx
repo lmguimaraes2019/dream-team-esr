@@ -500,16 +500,6 @@ export default function DescricaoCargoEditDialog({ colaboradorId, open, onOpenCh
                     </Button>
                   </div>
                 </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleImportFile(f);
-                  }}
-                />
                 <div className="flex-1 overflow-y-auto max-h-[420px]">
                   {groups.length === 0 ? (
                     <p className="p-3 text-xs text-muted-foreground italic">Adicione o primeiro processo.</p>
