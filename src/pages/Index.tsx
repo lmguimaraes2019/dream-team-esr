@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, DollarSign, TrendingUp, Users2, MessageSquare, Target, CheckCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Users, DollarSign, TrendingUp, Users2, MessageSquare, Target, CheckCircle, ListChecks } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { TIPO_LABELS, TIPO_COLORS, AusenciaBadge } from "@/components/AusenciasManager";
@@ -65,6 +68,8 @@ export default function Index() {
   const [feedbacksMes, setFeedbacksMes] = useState(0);
   const [acoesAbertas, setAcoesAbertas] = useState(0);
   const [taxaConclusao, setTaxaConclusao] = useState(0);
+  const [mapeamento, setMapeamento] = useState<{ id: string; nome: string; cargo: string; processos: number; responsabilidades: number }[]>([]);
+  const [mapBusca, setMapBusca] = useState("");
 
   useEffect(() => {
     supabase
