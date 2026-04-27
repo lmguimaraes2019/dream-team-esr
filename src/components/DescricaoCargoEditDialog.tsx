@@ -439,12 +439,27 @@ export default function DescricaoCargoEditDialog({ colaboradorId, open, onOpenCh
             <div className="grid gap-4 md:grid-cols-[260px_1fr]">
               {/* Lista de processos */}
               <div className="border rounded-md flex flex-col">
-                <div className="p-2 border-b flex items-center justify-between bg-muted/30">
+                <div className="p-2 border-b flex items-center justify-between bg-muted/30 gap-2">
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Processos</span>
-                  <Button type="button" size="sm" variant="ghost" className="h-7" onClick={addGroup}>
-                    <Plus className="h-3 w-3 mr-1" /> Novo
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button type="button" size="sm" variant="ghost" className="h-7" onClick={() => fileInputRef.current?.click()} title="Importar de planilha">
+                      <Upload className="h-3 w-3 mr-1" /> Importar
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" className="h-7" onClick={addGroup}>
+                      <Plus className="h-3 w-3 mr-1" /> Novo
+                    </Button>
+                  </div>
                 </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleImportFile(f);
+                  }}
+                />
                 <div className="flex-1 overflow-y-auto max-h-[420px]">
                   {groups.length === 0 ? (
                     <p className="p-3 text-xs text-muted-foreground italic">Adicione o primeiro processo.</p>
