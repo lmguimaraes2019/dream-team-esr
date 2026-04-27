@@ -390,6 +390,94 @@ export default function Index() {
         </Card>
       </div>
 
+      {/* Mapeamento de Descrição de Cargo */}
+      {(() => {
+        const totalColabs = mapeamento.length;
+        const comProcessos = mapeamento.filter((m) => m.processos > 0).length;
+        const totalProcessos = mapeamento.reduce((s, m) => s + m.processos, 0);
+        const totalResp = mapeamento.reduce((s, m) => s + m.responsabilidades, 0);
+        const filtrado = mapeamento.filter((m) =>
+          mapBusca ? m.nome.toLowerCase().includes(mapBusca.toLowerCase()) : true
+        );
+        return (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div className="flex items-center gap-2">
+                <ListChecks className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Descrição de Cargo Mapeada</CardTitle>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">{comProcessos}/{totalColabs}</span> colaboradores
+                <span className="mx-2">·</span>
+                {totalProcessos} processos
+                <span className="mx-2">·</span>
+                {totalResp} responsabilidades
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="single" collapsible>
+                <AccordionItem value="map" className="border-b-0">
+                  <AccordionTrigger className="py-2 text-sm hover:no-underline">
+                    Ver detalhes por colaborador
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-3">
+                      <Input
+                        placeholder="Buscar colaborador..."
+                        value={mapBusca}
+                        onChange={(e) => setMapBusca(e.target.value)}
+                        className="max-w-sm"
+                      />
+                      <div className="border rounded-md">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Colaborador</TableHead>
+                              <TableHead>Cargo</TableHead>
+                              <TableHead className="text-right">Processos</TableHead>
+                              <TableHead className="text-right">Responsabilidades</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filtrado.map((m) => (
+                              <TableRow key={m.id}>
+                                <TableCell>
+                                  <Link to={`/colaboradores/${m.id}`} className="hover:underline font-medium">
+                                    {m.nome}
+                                  </Link>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">{m.cargo}</TableCell>
+                                <TableCell className="text-right">
+                                  <span className={m.processos === 0 ? "text-muted-foreground" : "font-semibold"}>
+                                    {m.processos}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <span className={m.responsabilidades === 0 ? "text-muted-foreground" : "font-semibold"}>
+                                    {m.responsabilidades}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            {filtrado.length === 0 && (
+                              <TableRow>
+                                <TableCell colSpan={4} className="text-center text-muted-foreground py-4">
+                                  Nenhum colaborador encontrado.
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       <LiderancaResumo />
 
 
