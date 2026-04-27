@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Pencil } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import DescricaoCargoEditDialog, { DescricaoCargoData, Responsabilidade } from "./DescricaoCargoEditDialog";
