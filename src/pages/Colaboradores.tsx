@@ -24,6 +24,7 @@ export default function Colaboradores() {
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [ausenciasAtivas, setAusenciasAtivas] = useState<Record<string, string>>({});
   const [semFerias, setSemFerias] = useState<Set<string>>(new Set());
+  const [mapeamento, setMapeamento] = useState<Record<string, { processos: number; resps: number; data: string | null }>>({});
   const [search, setSearch] = useState("");
   const [filtroGerencia, setFiltroGerencia] = useState("all");
   const [filtroNivel, setFiltroNivel] = useState("all");
