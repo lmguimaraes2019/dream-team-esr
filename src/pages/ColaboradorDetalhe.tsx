@@ -289,6 +289,9 @@ export default function ColaboradorDetalhe() {
       {/* Movimentações de Carreira */}
       <MovimentacoesCarreiraCard colaboradorId={colab.id} />
 
+      {/* Descrição de Cargo */}
+      <DescricaoCargoCard colaboradorId={colab.id} />
+
       {/* Férias e Licenças */}
       <ColaboradorFerias colaboradorId={colab.id} />
 
