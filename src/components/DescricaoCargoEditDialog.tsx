@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, KeyboardEvent } from "react";
+import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,8 +7,38 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, ArrowUp, ArrowDown, Check } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, Check, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const norm = (s: any) =>
+  String(s ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+const PROCESSO_HEADERS = ["processo", "processos"];
+const RESP_HEADERS = [
+  "principais responsabilidades do cargo",
+  "principais responsabilidades",
+  "responsabilidades",
+  "responsabilidade",
+];
+
+function findHeaderIndices(rows: any[][]): { headerRow: number; processoCol: number; respCol: number } | null {
+  const max = Math.min(rows.length, 20);
+  for (let r = 0; r < max; r++) {
+    const row = rows[r] || [];
+    let pCol = -1, rCol = -1;
+    for (let c = 0; c < row.length; c++) {
+      const v = norm(row[c]);
+      if (pCol === -1 && PROCESSO_HEADERS.includes(v)) pCol = c;
+      if (rCol === -1 && RESP_HEADERS.includes(v)) rCol = c;
+    }
+    if (pCol !== -1 && rCol !== -1) return { headerRow: r, processoCol: pCol, respCol: rCol };
+  }
+  return null;
+}
 
 export type Responsabilidade = { processo: string; responsabilidade: string };
 
@@ -75,7 +106,73 @@ export default function DescricaoCargoEditDialog({ colaboradorId, open, onOpenCh
   const focusItemRef = useRef<{ gi: number; ii: number } | null>(null);
   const itemRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map());
   const processoNameRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const handleImportFile = async (file: File) => {
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      let imported: ProcessoGroup[] = [];
+      let totalItens = 0;
+      for (const sheetName of wb.SheetNames) {
+        const sheet = wb.Sheets[sheetName];
+        const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+        const found = findHeaderIndices(rows);
+        if (!found) continue;
+        const { headerRow, processoCol, respCol } = found;
+        let lastProcesso = "";
+        for (let i = headerRow + 1; i < rows.length; i++) {
+          const row = rows[i] || [];
+          const proc = String(row[processoCol] ?? "").trim();
+          const resp = String(row[respCol] ?? "").trim();
+          if (proc) lastProcesso = proc;
+          if (!resp) continue;
+          const procName = lastProcesso || "Sem nome";
+          const last = imported[imported.length - 1];
+          if (last && norm(last.processo) === norm(procName)) {
+            last.itens.push(resp);
+          } else {
+            imported.push({ processo: procName, itens: [resp] });
+          }
+          totalItens++;
+        }
+        if (imported.length > 0) break;
+      }
+      if (imported.length === 0) {
+        toast({
+          title: "Não foi possível importar",
+          description: "Não encontrei as colunas 'Processos' e 'Principais Responsabilidades do Cargo' na planilha.",
+          variant: "destructive",
+        });
+        return;
+      }
+      // Merge with existing groups (case-insensitive name match)
+      setGroups((prev) => {
+        const next = [...prev];
+        for (const g of imported) {
+          const idx = next.findIndex((x) => norm(x.processo) === norm(g.processo));
+          if (idx >= 0) {
+            next[idx] = { ...next[idx], itens: [...next[idx].itens, ...g.itens] };
+          } else {
+            next.push(g);
+          }
+        }
+        // Auto-select first imported
+        const firstImportedIdx = next.findIndex((x) => norm(x.processo) === norm(imported[0].processo));
+        if (firstImportedIdx >= 0) setSelectedIdx(firstImportedIdx);
+        return next;
+      });
+      toast({
+        title: "Importação concluída",
+        description: `${imported.length} processo(s) e ${totalItens} responsabilidade(s) importados.`,
+      });
+    } catch (e: any) {
+      toast({ title: "Erro ao ler planilha", description: e.message, variant: "destructive" });
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   useEffect(() => {
     if (open) {
