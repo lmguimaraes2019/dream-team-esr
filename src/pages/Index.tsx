@@ -16,7 +16,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   PieChart, Pie, Cell, ResponsiveContainer,
 } from "recharts";
-import Organograma from "@/components/Organograma";
+
 import LiderancaResumo from "@/components/LiderancaResumo";
 
 
@@ -614,7 +614,6 @@ export default function Index() {
         </>
       )}
 
-      <Organograma />
     </div>
   );
 }
