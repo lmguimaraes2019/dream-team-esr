@@ -26,7 +26,7 @@ const RESP_HEADERS = [
 ];
 
 function findHeaderIndices(rows: any[][]): { headerRow: number; processoCol: number; respCol: number } | null {
-  const max = Math.min(rows.length, 20);
+  const max = Math.min(rows.length, 40);
   for (let r = 0; r < max; r++) {
     const row = rows[r] || [];
     let pCol = -1, rCol = -1;
@@ -39,6 +39,28 @@ function findHeaderIndices(rows: any[][]): { headerRow: number; processoCol: num
   }
   return null;
 }
+
+function findMissao(rows: any[][]): string {
+  const max = Math.min(rows.length, 40);
+  for (let r = 0; r < max; r++) {
+    const row = rows[r] || [];
+    for (let c = 0; c < row.length; c++) {
+      if (norm(row[c]) === "missao do cargo") {
+        // Look at next non-empty row, same or next column
+        for (let r2 = r + 1; r2 < Math.min(r + 5, rows.length); r2++) {
+          const next = rows[r2] || [];
+          for (let c2 = 0; c2 < next.length; c2++) {
+            const v = String(next[c2] ?? "").replace(/\u00a0/g, " ").trim();
+            if (v && norm(v) !== "missao do cargo") return v;
+          }
+        }
+      }
+    }
+  }
+  return "";
+}
+
+const cleanCell = (v: any) => String(v ?? "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 
 export type Responsabilidade = { processo: string; responsabilidade: string };
 
@@ -115,18 +137,27 @@ export default function DescricaoCargoEditDialog({ colaboradorId, open, onOpenCh
       const wb = XLSX.read(buf, { type: "array" });
       let imported: ProcessoGroup[] = [];
       let totalItens = 0;
+      let missaoImportada = "";
       for (const sheetName of wb.SheetNames) {
         const sheet = wb.Sheets[sheetName];
         const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
         const found = findHeaderIndices(rows);
         if (!found) continue;
         const { headerRow, processoCol, respCol } = found;
+        if (!missaoImportada) missaoImportada = findMissao(rows);
         let lastProcesso = "";
         for (let i = headerRow + 1; i < rows.length; i++) {
           const row = rows[i] || [];
-          const proc = String(row[processoCol] ?? "").trim();
-          const resp = String(row[respCol] ?? "").trim();
+          const proc = cleanCell(row[processoCol]);
+          const resp = cleanCell(row[respCol]);
           if (proc) lastProcesso = proc;
+          // Stop if we hit another section header (e.g., "Características do Cargo", "Formação...")
+          const restoTexto = row.map(cleanCell).filter(Boolean).join(" ").toLowerCase();
+          if (!resp && !proc && restoTexto && /caracteristicas|formacao|competenc/i.test(
+            restoTexto.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          )) {
+            break;
+          }
           if (!resp) continue;
           const procName = lastProcesso || "Sem nome";
           const last = imported[imported.length - 1];
@@ -158,14 +189,24 @@ export default function DescricaoCargoEditDialog({ colaboradorId, open, onOpenCh
             next.push(g);
           }
         }
-        // Auto-select first imported
         const firstImportedIdx = next.findIndex((x) => norm(x.processo) === norm(imported[0].processo));
         if (firstImportedIdx >= 0) setSelectedIdx(firstImportedIdx);
         return next;
       });
+      // Importar missão se não preenchida ainda
+      let missaoMsg = "";
+      if (missaoImportada) {
+        setMissao((m) => {
+          if (!m.trim()) {
+            missaoMsg = " · Missão preenchida";
+            return missaoImportada;
+          }
+          return m;
+        });
+      }
       toast({
         title: "Importação concluída",
-        description: `${imported.length} processo(s) e ${totalItens} responsabilidade(s) importados.`,
+        description: `${imported.length} processo(s) e ${totalItens} responsabilidade(s) importados.${missaoMsg}`,
       });
     } catch (e: any) {
       toast({ title: "Erro ao ler planilha", description: e.message, variant: "destructive" });
