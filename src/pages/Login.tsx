@@ -5,6 +5,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { lovable } from "@/integrations/lovable";
+
+async function handleGoogleSignIn(toast: ReturnType<typeof useToast>["toast"]) {
+  try {
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      toast({ title: "Erro", description: result.error.message, variant: "destructive" });
+    }
+  } catch (e: any) {
+    toast({ title: "Erro", description: e.message, variant: "destructive" });
+  }
+}
 
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
