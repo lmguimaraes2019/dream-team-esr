@@ -20,6 +20,19 @@ async function handleGoogleSignIn(toast: ReturnType<typeof useToast>["toast"]) {
   }
 }
 
+async function handleAppleSignIn(toast: ReturnType<typeof useToast>["toast"]) {
+  try {
+    const result = await lovable.auth.signInWithOAuth("apple", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      toast({ title: "Erro", description: result.error.message, variant: "destructive" });
+    }
+  } catch (e: any) {
+    toast({ title: "Erro", description: e.message, variant: "destructive" });
+  }
+}
+
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
