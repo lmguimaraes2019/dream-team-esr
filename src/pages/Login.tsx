@@ -125,7 +125,6 @@ export default function Login() {
             </svg>
             Entrar com Google
           </Button>
-          </form>
           <div className="mt-4 text-center">
             <Button
               variant="link"
